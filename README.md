@@ -2,6 +2,14 @@
 
 OpenPdfStudio is a desktop PDF viewer built with [Avalonia](https://avaloniaui.net/) and [PDFium](https://pdfium.googlesource.com/pdfium/). It runs on .NET 10.
 
+Website: [younisiqbal.github.io/OpenPdfStudio](https://younisiqbal.github.io/OpenPdfStudio/)
+
+## Download
+
+Get the latest build for Windows, Linux, or macOS from the [Releases page](https://github.com/younisiqbal/OpenPdfStudio/releases/latest). Each download is a self-contained zip, so you don't need .NET installed. Unzip it and run `OpenPdfStudio`.
+
+The macOS build is not signed yet. The first time you open it, right-click the app and choose Open.
+
 ## Features
 
 - Open PDF files, including password-protected documents.
@@ -58,6 +66,11 @@ PDFium calls run on a dedicated background worker, so rendering does not block t
 - `ViewModels` holds the home screen, document, and page view models.
 - `Views` holds the main window, home screen, document viewer, toolbars, and dialogs.
 - `Styles` and `Themes` hold colors, icons, control styles, and theme variants.
+- `site` holds the project website, deployed to GitHub Pages.
+
+## Releases
+
+Pushing a tag such as `v0.1.0` runs the release workflow. It publishes self-contained builds for `win-x64`, `linux-x64`, and `osx-arm64` and attaches them to a GitHub Release.
 
 ## License
 
