@@ -1,0 +1,162 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             x:Class="OpenPdfStudio.Views.ViewerTopBar"
+             x:DataType="vm:DocumentViewModel">
+  <Border Background="{DynamicResource SystemChromeLowColor}"
+          BorderBrush="{DynamicResource HairlineBrush}"
+          BorderThickness="0,0,0,1"
+          Padding="8,4">
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+      <StackPanel Orientation="Horizontal" Spacing="2">
+
+        <Button Classes="tool" Classes.active="{Binding IsHandTool}"
+                ToolTip.Tip="Hand tool: drag to scroll, drag on text to select">
+          <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+              <MenuItem Header="Hand tool" Command="{Binding UseHandToolCommand}" />
+              <Separator />
+              <MenuItem Header="Hand cursor" IsEnabled="False" />
+              <MenuItem Header="Open palm, fist while dragging"
+                        Command="{Binding SetHandCursorStyleCommand}" CommandParameter="PalmAndFist">
+                <MenuItem.Icon>
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                            IsVisible="{Binding IsPalmAndFistCursor}" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Open palm"
+                        Command="{Binding SetHandCursorStyleCommand}" CommandParameter="Palm">
+                <MenuItem.Icon>
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                            IsVisible="{Binding IsPalmCursor}" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Move arrows"
+                        Command="{Binding SetHandCursorStyleCommand}" CommandParameter="MoveArrows">
+                <MenuItem.Icon>
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                            IsVisible="{Binding IsMoveArrowsCursor}" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Pointing finger"
+                        Command="{Binding SetHandCursorStyleCommand}" CommandParameter="PointingFinger">
+                <MenuItem.Icon>
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                            IsVisible="{Binding IsPointingFingerCursor}" />
+                </MenuItem.Icon>
+              </MenuItem>
+            </MenuFlyout>
+          </Button.Flyout>
+          <StackPanel Spacing="2">
+            <PathIcon Data="{StaticResource HandIcon}" />
+            <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+              <TextBlock Text="Hand" />
+              <PathIcon Data="{StaticResource ChevronDownIcon}" Width="8" Height="8" />
+            </StackPanel>
+          </StackPanel>
+        </Button>
+
+        <Button Classes="tool" Classes.active="{Binding IsSelectTool}" ToolTip.Tip="Select tool">
+          <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+              <MenuItem Header="Select text" Command="{Binding UseSelectToolCommand}" />
+              <MenuItem Header="Select annotation" Command="{Binding ComingSoonCommand}" CommandParameter="Select annotation" />
+            </MenuFlyout>
+          </Button.Flyout>
+          <StackPanel Spacing="2">
+            <PathIcon Data="{StaticResource SelectIcon}" />
+            <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+              <TextBlock Text="Select" />
+              <PathIcon Data="{StaticResource ChevronDownIcon}" Width="8" Height="8" />
+            </StackPanel>
+          </StackPanel>
+        </Button>
+
+        <Button Classes="tool" Command="{Binding ComingSoonCommand}" CommandParameter="Snapshot"
+                ToolTip.Tip="Snapshot (coming soon)">
+          <StackPanel Spacing="2">
+            <PathIcon Data="{StaticResource SnapshotIcon}" />
+            <TextBlock Text="SnapShot" />
+          </StackPanel>
+        </Button>
+
+        <Button Classes="tool" ToolTip.Tip="Clipboard">
+          <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+              <MenuItem Header="Copy" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
+              <MenuItem Header="Paste" Command="{Binding ComingSoonCommand}" CommandParameter="Paste" />
+            </MenuFlyout>
+          </Button.Flyout>
+          <StackPanel Spacing="2">
+            <PathIcon Data="{StaticResource ClipboardIcon}" />
+            <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+              <TextBlock Text="Clipboard" />
+              <PathIcon Data="{StaticResource ChevronDownIcon}" Width="8" Height="8" />
+            </StackPanel>
+          </StackPanel>
+        </Button>
+
+        <Border Classes="toolSeparator" />
+
+        <Button Classes="tool" ToolTip.Tip="Zoom">
+          <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+              <MenuItem Header="Zoom in" InputGesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
+              <MenuItem Header="Zoom out" InputGesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
+              <Separator />
+              <MenuItem Header="50%" Command="{Binding SetZoomCommand}" CommandParameter="50" />
+              <MenuItem Header="75%" Command="{Binding SetZoomCommand}" CommandParameter="75" />
+              <MenuItem Header="100%" Command="{Binding SetZoomCommand}" CommandParameter="100" />
+              <MenuItem Header="125%" Command="{Binding SetZoomCommand}" CommandParameter="125" />
+              <MenuItem Header="150%" Command="{Binding SetZoomCommand}" CommandParameter="150" />
+              <MenuItem Header="200%" Command="{Binding SetZoomCommand}" CommandParameter="200" />
+              <MenuItem Header="400%" Command="{Binding SetZoomCommand}" CommandParameter="400" />
+            </MenuFlyout>
+          </Button.Flyout>
+          <StackPanel Spacing="2">
+            <PathIcon Data="{StaticResource ZoomIcon}" />
+            <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+              <TextBlock Text="Zoom" />
+              <PathIcon Data="{StaticResource ChevronDownIcon}" Width="8" Height="8" />
+            </StackPanel>
+          </StackPanel>
+        </Button>
+
+        <Button Classes="tool" ToolTip.Tip="Page fit options">
+          <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+              <MenuItem Header="Fit width" Command="{Binding FitWidthCommand}" />
+              <MenuItem Header="Fit page" Command="{Binding FitPageCommand}" />
+              <MenuItem Header="Actual size" Command="{Binding ActualSizeCommand}" />
+            </MenuFlyout>
+          </Button.Flyout>
+          <StackPanel Spacing="2">
+            <PathIcon Data="{StaticResource PageFitIcon}" />
+            <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+              <TextBlock Text="Page Fit" />
+              <PathIcon Data="{StaticResource ChevronDownIcon}" Width="8" Height="8" />
+            </StackPanel>
+          </StackPanel>
+        </Button>
+
+        <Border Classes="toolSeparator" />
+
+        <Button Classes="tool" Command="{Binding ComingSoonCommand}" CommandParameter="Typewriter"
+                ToolTip.Tip="Typewriter (coming soon)">
+          <StackPanel Spacing="2">
+            <PathIcon Data="{StaticResource TypewriterIcon}" />
+            <TextBlock Text="Typewriter" />
+          </StackPanel>
+        </Button>
+
+        <Button Classes="tool" Command="{Binding ComingSoonCommand}" CommandParameter="Highlight"
+                ToolTip.Tip="Highlight (coming soon)">
+          <StackPanel Spacing="2">
+            <PathIcon Data="{StaticResource HighlightIcon}" />
+            <TextBlock Text="Highlight" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+</UserControl>

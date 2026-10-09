@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             x:Class="OpenPdfStudio.Views.SelectionPopup"
+             x:DataType="vm:DocumentViewModel">
+  <Border Background="{DynamicResource SystemChromeLowColor}"
+          BorderBrush="{DynamicResource SystemBaseLowColor}"
+          BorderThickness="1"
+          CornerRadius="8"
+          Padding="4"
+          BoxShadow="0 4 14 0 #40000000">
+    <StackPanel Orientation="Horizontal" Spacing="2">
+      <Button Classes="icon" Command="{Binding CopySelectionCommand}" ToolTip.Tip="Copy (Ctrl+C)">
+        <PathIcon Data="{StaticResource CopyIcon}" />
+      </Button>
+      <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Highlight" ToolTip.Tip="Highlight (coming soon)">
+        <PathIcon Data="{StaticResource HighlightIcon}" />
+      </Button>
+      <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Strikethrough" ToolTip.Tip="Strikethrough (coming soon)">
+        <PathIcon Data="{StaticResource StrikethroughIcon}" />
+      </Button>
+      <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Underline" ToolTip.Tip="Underline (coming soon)">
+        <PathIcon Data="{StaticResource UnderlineIcon}" />
+      </Button>
+      <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Bookmark" ToolTip.Tip="Bookmark (coming soon)">
+        <PathIcon Data="{StaticResource BookmarkIcon}" />
+      </Button>
+      <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Text box" ToolTip.Tip="Text box (coming soon)">
+        <PathIcon Data="{StaticResource TextBoxIcon}" />
+      </Button>
+    </StackPanel>
+  </Border>
+</UserControl>

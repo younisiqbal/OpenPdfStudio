@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             xmlns:views="using:OpenPdfStudio.Views"
+             xmlns:controls="using:OpenPdfStudio.Views.Controls"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+             x:Class="OpenPdfStudio.Views.DocumentView"
+             x:DataType="vm:DocumentViewModel"
+             Focusable="True">
+
+  <UserControl.Styles>
+    <Style Selector="Button.thumb">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Padding" Value="6" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.thumb:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+    </Style>
+    <Style Selector="Button.thumb.current">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NavActiveBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <views:ViewerTopBar DockPanel.Dock="Top" />
+    <views:ViewerBottomBar DockPanel.Dock="Bottom" />
+
+    <Border DockPanel.Dock="Left"
+            Width="152"
+            IsVisible="{Binding IsThumbnailsVisible}"
+            Background="{DynamicResource SystemChromeLowColor}"
+            BorderBrush="{DynamicResource HairlineBrush}"
+            BorderThickness="0,0,1,0">
+      <ScrollViewer x:Name="ThumbScroller" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl x:Name="ThumbnailHost" ItemsSource="{Binding Pages}" Margin="0,12">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:PdfPageViewModel">
+              <Button Classes="thumb" Classes.current="{Binding IsCurrent}"
+                      Margin="0,0,0,8" Click="OnThumbnailClick"
+                      ToolTip.Tip="{Binding PageNumber, StringFormat='Page {0}'}">
+                <StackPanel Spacing="4">
+                  <LayoutTransformControl HorizontalAlignment="Center" LayoutTransform="{Binding PageTransform}">
+                    <Border Width="{x:Static vm:PdfPageViewModel.ThumbnailWidth}"
+                            Height="{Binding ThumbnailHeight}"
+                            Background="White"
+                            BoxShadow="0 1 4 0 #33000000">
+                      <Image Source="{Binding Thumbnail}" Stretch="Fill" />
+                    </Border>
+                  </LayoutTransformControl>
+                  <TextBlock Text="{Binding PageNumber}" FontSize="11" HorizontalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+
+    <Grid>
+      <ScrollViewer x:Name="PageScroller"
+                    HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Auto"
+                    Background="{DynamicResource SystemChromeMediumColor}">
+        <ItemsControl x:Name="PagesHost"
+                      ItemsSource="{Binding Pages}"
+                      Margin="24"
+                      HorizontalAlignment="Center">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:PdfPageViewModel">
+              <LayoutTransformControl Margin="0,0,0,12"
+                                      HorizontalAlignment="Center"
+                                      LayoutTransform="{Binding PageTransform}">
+                <Border Width="{Binding DisplayWidth}"
+                        Height="{Binding DisplayHeight}"
+                        Background="White"
+                        BoxShadow="0 2 10 0 #40000000">
+                  <Grid>
+                    <Image Source="{Binding Bitmap}" Stretch="Fill"
+                           RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <controls:SelectionOverlay Rects="{Binding SelectionRects}"
+                                               PageWidthPoints="{Binding WidthPoints}" />
+                    <TextBlock Text="This page could not be rendered."
+                               Foreground="#80000000"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsVisible="{Binding HasError}" />
+                  </Grid>
+                </Border>
+              </LayoutTransformControl>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <Canvas x:Name="PopupLayer" ClipToBounds="True">
+        <views:SelectionPopup x:Name="SelectionPopupHost" IsVisible="False" />
+      </Canvas>
+    </Grid>
+  </DockPanel>
+</UserControl>

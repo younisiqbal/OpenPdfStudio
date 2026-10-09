@@ -1,0 +1,227 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:OpenPdfStudio.ViewModels"
+        xmlns:themes="using:OpenPdfStudio.Themes"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
+        x:Class="OpenPdfStudio.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/app-logo.ico"
+        Title="OpenPdfStudio"
+        Width="1100" Height="700"
+        MinWidth="800" MinHeight="500">
+
+  <Design.DataContext>
+    <vm:MainViewModel />
+  </Design.DataContext>
+
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenFileCommand}" />
+    <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseActiveTabCommand}" />
+    <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
+    <KeyBinding Gesture="Ctrl+Add" Command="{Binding ZoomInCommand}" />
+    <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
+    <KeyBinding Gesture="Ctrl+Subtract" Command="{Binding ZoomOutCommand}" />
+    <KeyBinding Gesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
+  </Window.KeyBindings>
+
+  <DockPanel>
+
+    <Menu DockPanel.Dock="Top">
+      <MenuItem Header="_File">
+        <MenuItem Header="_Open..." InputGesture="Ctrl+O" Command="{Binding OpenFileCommand}" />
+        <MenuItem Header="Open _Recent">
+          <MenuItem Header="Clear recent files" Command="{Binding Home.ClearRecentCommand}" />
+        </MenuItem>
+        <MenuItem Header="_Close tab" InputGesture="Ctrl+W" Command="{Binding CloseActiveTabCommand}" />
+        <Separator />
+        <MenuItem Header="_Save" InputGesture="Ctrl+S" IsEnabled="False" />
+        <MenuItem Header="Save _As..." InputGesture="Ctrl+Shift+S" IsEnabled="False" />
+        <Separator />
+        <MenuItem Header="E_xit" InputGesture="Alt+F4" Command="{Binding ExitCommand}" />
+      </MenuItem>
+      <MenuItem Header="_Edit">
+        <MenuItem Header="_Undo" InputGesture="Ctrl+Z" IsEnabled="False" />
+        <MenuItem Header="_Redo" InputGesture="Ctrl+Y" IsEnabled="False" />
+        <Separator />
+        <MenuItem Header="_Copy" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
+        <MenuItem Header="_Find..." InputGesture="Ctrl+F" IsEnabled="False" />
+      </MenuItem>
+      <MenuItem Header="_View">
+        <MenuItem Header="Zoom _In" InputGesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
+        <MenuItem Header="Zoom _Out" InputGesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
+        <MenuItem Header="Fit _Width" Command="{Binding FitWidthCommand}" />
+        <MenuItem Header="Fit _Page" Command="{Binding FitPageCommand}" />
+      </MenuItem>
+      <MenuItem Header="_Organize">
+        <MenuItem Header="_Merge PDFs..." IsEnabled="False" />
+        <MenuItem Header="_Split PDF..." IsEnabled="False" />
+        <MenuItem Header="_Rotate / Delete pages" IsEnabled="False" />
+      </MenuItem>
+      <MenuItem Header="_Protect">
+        <MenuItem Header="Add _password..." IsEnabled="False" />
+        <MenuItem Header="_Compress..." IsEnabled="False" />
+      </MenuItem>
+      <MenuItem Header="_Help">
+        <MenuItem Header="_Documentation" IsEnabled="False" />
+        <MenuItem Header="_Report an issue" IsEnabled="False" />
+        <MenuItem Header="_About OpenPdfStudio" IsEnabled="False" />
+      </MenuItem>
+    </Menu>
+
+    <Border DockPanel.Dock="Bottom"
+            Background="{DynamicResource SystemChromeLowColor}"
+            BorderBrush="{DynamicResource HairlineBrush}"
+            BorderThickness="0,1,0,0"
+            Padding="14,6">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="11" Text="{Binding Version}" />
+        <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="12" Margin="0,0,24,0"
+                   Text="{Binding ActiveDocument.PageStatus, FallbackValue=''}"
+                   IsVisible="{Binding HasActiveDocument}" />
+        <TextBlock FontSize="12" Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Top"
+            Background="{DynamicResource SystemChromeLowColor}"
+            BorderBrush="{DynamicResource HairlineBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="10,6,10,0">
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Horizontal" Spacing="2">
+          <Button Classes="tab" Classes.active="{Binding IsHomeActive}"
+                  Command="{Binding ShowHomeCommand}" Content="Home" />
+
+          <ItemsControl ItemsSource="{Binding Documents}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="2" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:DocumentViewModel">
+                <Button Classes="tab" Classes.active="{Binding IsActive}"
+                        Command="{Binding ActivateCommand}"
+                        ToolTip.Tip="{Binding FilePath}"
+                        Padding="12,7,6,7">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Width="14" Height="17" CornerRadius="2"
+                            Background="{DynamicResource PdfBadgeBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding FileName}" MaxWidth="180"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <Button Classes="tabClose" Command="{Binding CloseCommand}"
+                            ToolTip.Tip="Close (Ctrl+W)" VerticalAlignment="Center">
+                      <PathIcon Data="{StaticResource CloseIcon}" />
+                    </Button>
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <Button Classes="ghost"
+                  ToolTip.Tip="Open a PDF (Ctrl+O)"
+                  Command="{Binding OpenFileCommand}"
+                  VerticalAlignment="Center"
+                  Margin="4,0,0,4">
+            <PathIcon Data="{StaticResource PlusIcon}" Width="12" Height="12" />
+          </Button>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <Border DockPanel.Dock="Left"
+            Background="{DynamicResource SystemChromeLowColor}"
+            BorderBrush="{DynamicResource HairlineBrush}"
+            BorderThickness="0,0,1,0"
+            Padding="6,16"
+            Width="76">
+      <DockPanel>
+        <Button DockPanel.Dock="Bottom" Classes="nav" ToolTip.Tip="Change theme">
+          <Button.Flyout>
+            <MenuFlyout Placement="RightEdgeAlignedBottom">
+              <MenuItem Header="Dark"
+                        Command="{Binding SetThemeCommand}"
+                        CommandParameter="{x:Static themes:AppTheme.Dark}">
+                <MenuItem.Icon>
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="14" Height="14"
+                            IsVisible="{Binding IsDarkTheme}" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="Light"
+                        Command="{Binding SetThemeCommand}"
+                        CommandParameter="{x:Static themes:AppTheme.Light}">
+                <MenuItem.Icon>
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="14" Height="14"
+                            IsVisible="{Binding IsLightTheme}" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="System"
+                        Command="{Binding SetThemeCommand}"
+                        CommandParameter="{x:Static themes:AppTheme.System}">
+                <MenuItem.Icon>
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="14" Height="14"
+                            IsVisible="{Binding IsSystemTheme}" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <Separator />
+              <MenuItem Header="Midnight"
+                        Command="{Binding SetThemeCommand}"
+                        CommandParameter="{x:Static themes:AppTheme.Midnight}">
+                <MenuItem.Icon>
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="14" Height="14"
+                            IsVisible="{Binding IsMidnightTheme}" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="High Contrast"
+                        Command="{Binding SetThemeCommand}"
+                        CommandParameter="{x:Static themes:AppTheme.HighContrast}">
+                <MenuItem.Icon>
+                  <PathIcon Data="{StaticResource CheckIcon}" Width="14" Height="14"
+                            IsVisible="{Binding IsHighContrastTheme}" />
+                </MenuItem.Icon>
+              </MenuItem>
+            </MenuFlyout>
+          </Button.Flyout>
+          <StackPanel Spacing="4">
+            <PathIcon Data="{StaticResource PaletteIcon}" />
+            <TextBlock Text="Theme" FontSize="11" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Button>
+
+        <StackPanel Spacing="4">
+          <Button Classes="nav" Classes.active="{Binding IsHomeActive}" ToolTip.Tip="Home"
+                  Command="{Binding ShowHomeCommand}">
+            <StackPanel Spacing="4">
+              <PathIcon Data="{StaticResource HomeIcon}" />
+              <TextBlock Text="Home" FontSize="11" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" ToolTip.Tip="Recent files" Command="{Binding ShowHomeCommand}">
+            <StackPanel Spacing="4">
+              <PathIcon Data="{StaticResource RecentIcon}" />
+              <TextBlock Text="Recent" FontSize="11" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" ToolTip.Tip="Starred files" Command="{Binding ShowHomeCommand}">
+            <StackPanel Spacing="4">
+              <PathIcon Data="{StaticResource StarIcon}" />
+              <TextBlock Text="Starred" FontSize="11" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" IsEnabled="False" ToolTip.Tip="Settings — coming soon">
+            <StackPanel Spacing="4">
+              <PathIcon Data="{StaticResource SettingsIcon}" />
+              <TextBlock Text="Settings" FontSize="11" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <ContentControl Content="{Binding CurrentPage}"
+                    Background="{DynamicResource SystemRegionColor}" />
+  </DockPanel>
+</Window>

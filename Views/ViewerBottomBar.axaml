@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             x:Class="OpenPdfStudio.Views.ViewerBottomBar"
+             x:DataType="vm:DocumentViewModel">
+  <Border Background="{DynamicResource SystemChromeLowColor}"
+          BorderBrush="{DynamicResource HairlineBrush}"
+          BorderThickness="0,1,0,0"
+          Padding="8,3">
+    <DockPanel>
+
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+        <Button Classes="icon" Classes.active="{Binding IsThumbnailsVisible}"
+                Command="{Binding ToggleThumbnailsCommand}" ToolTip.Tip="Show or hide page thumbnails">
+          <PathIcon Data="{StaticResource OutlineIcon}" />
+        </Button>
+        <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Print" ToolTip.Tip="Print (coming soon)">
+          <PathIcon Data="{StaticResource PrintIcon}" />
+        </Button>
+        <Border Classes="toolSeparator" Margin="4,4" />
+        <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Single page view" ToolTip.Tip="Single page (coming soon)">
+          <PathIcon Data="{StaticResource SinglePageIcon}" />
+        </Button>
+        <Button Classes="icon active" ToolTip.Tip="Continuous scroll">
+          <PathIcon Data="{StaticResource ContinuousIcon}" />
+        </Button>
+        <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Two-page view" ToolTip.Tip="Two pages (coming soon)">
+          <PathIcon Data="{StaticResource TwoPageIcon}" />
+        </Button>
+        <Border Classes="toolSeparator" Margin="4,4" />
+        <Button Classes="icon" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom out">
+          <PathIcon Data="{StaticResource MinusIcon}" />
+        </Button>
+        <Slider Width="120" Minimum="25" Maximum="400" VerticalAlignment="Center"
+                Value="{Binding ZoomPercent, Mode=TwoWay}" Margin="2,-6" />
+        <Button Classes="icon" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom in">
+          <PathIcon Data="{StaticResource PlusIcon}" />
+        </Button>
+        <Button Classes="ghost" Padding="8,3" MinWidth="58" VerticalAlignment="Center"
+                Content="{Binding ZoomText}" ToolTip.Tip="Zoom presets">
+          <Button.Flyout>
+            <MenuFlyout Placement="TopEdgeAlignedRight">
+              <MenuItem Header="Fit width" Command="{Binding FitWidthCommand}" />
+              <MenuItem Header="Fit page" Command="{Binding FitPageCommand}" />
+              <Separator />
+              <MenuItem Header="50%" Command="{Binding SetZoomCommand}" CommandParameter="50" />
+              <MenuItem Header="75%" Command="{Binding SetZoomCommand}" CommandParameter="75" />
+              <MenuItem Header="100%" Command="{Binding SetZoomCommand}" CommandParameter="100" />
+              <MenuItem Header="150%" Command="{Binding SetZoomCommand}" CommandParameter="150" />
+              <MenuItem Header="200%" Command="{Binding SetZoomCommand}" CommandParameter="200" />
+              <MenuItem Header="400%" Command="{Binding SetZoomCommand}" CommandParameter="400" />
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
+        <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Full screen" ToolTip.Tip="Full screen (coming soon)">
+          <PathIcon Data="{StaticResource FullscreenIcon}" />
+        </Button>
+      </StackPanel>
+
+      <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+        <Button Classes="icon" Command="{Binding FirstPageCommand}" ToolTip.Tip="First page">
+          <PathIcon Data="{StaticResource PageFirstIcon}" />
+        </Button>
+        <Button Classes="icon" Command="{Binding PreviousPageCommand}" ToolTip.Tip="Previous page">
+          <PathIcon Data="{StaticResource PagePreviousIcon}" />
+        </Button>
+        <TextBox Text="{Binding PageInput}" Width="48" MinHeight="26" Padding="6,2"
+                 HorizontalContentAlignment="Center" VerticalAlignment="Center" FontSize="12">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding GoToPageInputCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+        <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center" Margin="4,0">
+          <Run Text="/" />
+          <Run Text="{Binding PageCount, Mode=OneWay}" />
+        </TextBlock>
+        <Button Classes="icon" Command="{Binding NextPageCommand}" ToolTip.Tip="Next page">
+          <PathIcon Data="{StaticResource PageNextIcon}" />
+        </Button>
+        <Button Classes="icon" Command="{Binding LastPageCommand}" ToolTip.Tip="Last page">
+          <PathIcon Data="{StaticResource PageLastIcon}" />
+        </Button>
+        <Border Classes="toolSeparator" Margin="4,4" />
+        <Button Classes="icon" Command="{Binding RotateClockwiseCommand}" ToolTip.Tip="Rotate view 90° clockwise">
+          <PathIcon Data="{StaticResource RotatePageIcon}" />
+        </Button>
+      </StackPanel>
+    </DockPanel>
+  </Border>
+</UserControl>
