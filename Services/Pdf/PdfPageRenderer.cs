@@ -62,4 +62,9 @@ internal static class PdfHandles
     public static bool IsNull(FpdfPageT? handle) => handle is null || handle.__Instance == IntPtr.Zero;
     public static bool IsNull(FpdfTextpageT? handle) => handle is null || handle.__Instance == IntPtr.Zero;
     public static bool IsNull(FpdfBitmapT? handle) => handle is null || handle.__Instance == IntPtr.Zero;
+    public static bool IsNull(FpdfBookmarkT? handle) => handle is null || handle.__Instance == IntPtr.Zero;
+    public static bool IsNull(FpdfDestT? handle) => handle is null || handle.__Instance == IntPtr.Zero;
+    public static bool IsNull(FpdfActionT? handle) => handle is null || handle.__Instance == IntPtr.Zero;
+    public static bool IsNull(FpdfAnnotationT? handle) => handle is null || handle.__Instance == IntPtr.Zero;
+    public static bool IsNull(FpdfAttachmentT? handle) => handle is null || handle.__Instance == IntPtr.Zero;
 }

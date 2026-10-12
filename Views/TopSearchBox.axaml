@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             x:Class="OpenPdfStudio.Views.TopSearchBox"
+             x:DataType="vm:TopSearchViewModel">
+  <Panel>
+    <TextBox x:Name="SearchBox" Width="280" MinHeight="30" Padding="6,5"
+             Text="{Binding Query}" PlaceholderText="Search"
+             ToolTip.Tip="Search this PDF, open tabs, or a folder">
+      <TextBox.InnerLeftContent>
+        <PathIcon Data="{StaticResource SearchIcon}" Width="14" Height="14" Margin="10,0,2,0" Opacity="0.7" />
+      </TextBox.InnerLeftContent>
+      <TextBox.KeyBindings>
+        <KeyBinding Gesture="Enter" Command="{Binding ShowMatchingResultsCommand}" />
+      </TextBox.KeyBindings>
+    </TextBox>
+
+    <Popup x:Name="DropDown"
+           PlacementTarget="{Binding #SearchBox}"
+           Placement="BottomEdgeAlignedLeft"
+           VerticalOffset="4"
+           IsLightDismissEnabled="True"
+           IsOpen="{Binding IsDropDownOpen, Mode=TwoWay}">
+      <Border Width="300"
+              Background="{DynamicResource SystemChromeLowColor}"
+              BorderBrush="{DynamicResource SystemBaseLowColor}"
+              BorderThickness="1"
+              CornerRadius="8"
+              Padding="4,8"
+              BoxShadow="0 6 20 0 #50000000">
+        <StackPanel Spacing="2">
+          <DockPanel Margin="10,0,6,2">
+            <Button DockPanel.Dock="Right" Classes="ghost" Padding="6,2" FontSize="11"
+                    Content="Clear" Command="{Binding ClearRecentCommand}" IsVisible="{Binding HasRecentItems}" />
+            <TextBlock Text="Recently Used" FontWeight="SemiBold" VerticalAlignment="Center" />
+          </DockPanel>
+
+          <TextBlock Text="No results are matched" Classes="muted" Margin="12,4,12,6"
+                     IsVisible="{Binding !HasRecentItems}" />
+
+          <ItemsControl ItemsSource="{Binding RecentItems}" IsVisible="{Binding HasRecentItems}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <Button Classes="menuRow"
+                        Command="{Binding $parent[ItemsControl].((vm:TopSearchViewModel)DataContext).UseRecentCommand}"
+                        CommandParameter="{Binding}">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource HistoryIcon}" />
+                    <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" MaxWidth="230" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Text="Find in Document" FontWeight="SemiBold" Margin="10,8,10,2" />
+          <Button Classes="menuRow" Command="{Binding ShowMatchingResultsCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <PathIcon Data="{StaticResource SearchIcon}" />
+              <TextBlock Text="Show matching text results" />
+            </StackPanel>
+          </Button>
+
+          <Border Height="1" Margin="6,4" Background="{DynamicResource HairlineBrush}" />
+
+          <Button Classes="menuRow" Command="{Binding OpenAdvancedSearchCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <PathIcon Data="{StaticResource AdvancedSearchIcon}" />
+              <TextBlock Text="Advanced Search..." />
+            </StackPanel>
+          </Button>
+          <Button Classes="menuRow" Command="{Binding SearchAndHighlightCommand}" IsEnabled="{Binding HasDocument}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <PathIcon Data="{StaticResource HighlightIcon}" />
+              <TextBlock Text="Search &amp; Highlight" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Border>
+    </Popup>
+  </Panel>
+</UserControl>

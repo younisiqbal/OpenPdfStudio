@@ -66,6 +66,8 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
             RequestRenders();
         };
 
+        Search = new DocumentSearchViewModel(this, session, setStatus);
+
         ViewerPreferences.Changed += OnViewerPreferencesChanged;
         ApplyZoomToPages();
         if (Pages.Count > 0)
@@ -76,6 +78,8 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     public string FilePath { get; }
     public string FileName { get; }
     public ObservableCollection<PdfPageViewModel> Pages { get; }
+    public DocumentSearchViewModel Search { get; }
+    public PdfDocumentSession Session => _session;
     public int PageCount => Pages.Count;
 
     public double RenderScaling { get; set; } = 1;
@@ -86,6 +90,9 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
 
     /// <summary>Raised when the view should scroll so the page at this index is at the top.</summary>
     public event Action<int>? ScrollToPageRequested;
+
+    /// <summary>Raised when the view should bring a point on a page into view. Arguments: page index, fraction down the page.</summary>
+    public event Action<int, double>? ScrollToMatchRequested;
 
     [ObservableProperty] private bool _isActive;
 
@@ -311,6 +318,25 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         CurrentPageIndex = index;
         PageInput = PageNumber.ToString(CultureInfo.InvariantCulture);
         ScrollToPageRequested?.Invoke(index);
+    }
+
+    /// <summary>Scrolls so the given rect on a page is in view. The rect is in PDF points.</summary>
+    public void RevealRect(int pageIndex, Rect rect)
+    {
+        if (pageIndex < 0 || pageIndex >= Pages.Count)
+            return;
+
+        var page = Pages[pageIndex];
+        var fraction = Rotation switch
+        {
+            90 => rect.X / page.WidthPoints,
+            180 => 1 - rect.Bottom / page.HeightPoints,
+            270 => 1 - rect.Right / page.WidthPoints,
+            _ => rect.Y / page.HeightPoints
+        };
+
+        CurrentPageIndex = pageIndex;
+        ScrollToMatchRequested?.Invoke(pageIndex, Math.Clamp(fraction, 0, 1));
     }
 
     /// <summary>Called by the view as the user scrolls.</summary>
@@ -586,6 +612,22 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>Returns the selected text, or null when nothing is selected.</summary>
+    public async Task<string?> GetSelectedTextAsync()
+    {
+        if (_selection is not { } range || range.Count <= 0)
+            return null;
+
+        try
+        {
+            return await _session.GetTextAsync(range.PageIndex, range.Start, range.Count);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private async Task CopySelection()
     {
@@ -612,6 +654,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
             return;
 
         _disposed = true;
+        Search.Dispose();
         ViewerPreferences.Changed -= OnViewerPreferencesChanged;
         _renderDebounce.Stop();
         _zoomCts.Cancel();

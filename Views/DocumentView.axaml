@@ -94,6 +94,12 @@
                   <Grid>
                     <Image Source="{Binding Bitmap}" Stretch="Fill"
                            RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <controls:SelectionOverlay Rects="{Binding SearchRects}"
+                                               PageWidthPoints="{Binding WidthPoints}"
+                                               Fill="#59FFD400" />
+                    <controls:SelectionOverlay Rects="{Binding CurrentMatchRects}"
+                                               PageWidthPoints="{Binding WidthPoints}"
+                                               Fill="#99FF8C00" />
                     <controls:SelectionOverlay Rects="{Binding SelectionRects}"
                                                PageWidthPoints="{Binding WidthPoints}" />
                     <TextBlock Text="This page could not be rendered."
@@ -111,6 +117,11 @@
       <Canvas x:Name="PopupLayer" ClipToBounds="True">
         <views:SelectionPopup x:Name="SelectionPopupHost" IsVisible="False" />
       </Canvas>
+
+      <views:FindBar x:Name="FindBarHost"
+                     DataContext="{Binding Search}"
+                     HorizontalAlignment="Right" VerticalAlignment="Top"
+                     Margin="0,12,24,0" />
     </Grid>
   </DockPanel>
 </UserControl>

@@ -20,6 +20,9 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 - Rotate the page view.
 - Hand tool for panning, with a choice of cursor styles.
 - Select text on a page and copy it to the clipboard.
+- Find box (Ctrl+F) in the top-right corner of the page. It highlights every match, steps through them with Previous and Next, and has a gear menu with Whole Words Only, Case Sensitive, Include Page Text, Include Bookmarks, Include Comments, and Highlight All Text.
+- Search box in the tab row with recently used searches, Show matching text results, Advanced Search, and Search & Highlight.
+- Advanced Search panel. Search the current document, all open documents, or a folder of PDFs. Match the exact phrase, any of the words, or all of the words. Optionally include bookmarks, comments, and attachment names, and use stemming to find other forms of a word. Results are grouped by file, and clicking one jumps to the match.
 - Themes: Dark, Light, System, Midnight, and High Contrast.
 
 ### Keyboard shortcuts
@@ -31,6 +34,11 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 | Ctrl+Plus | Zoom in |
 | Ctrl+Minus | Zoom out |
 | Ctrl+C | Copy selected text |
+| Ctrl+F | Open the find box |
+| F3 / Enter | Next match |
+| Shift+F3 / Shift+Enter | Previous match |
+| Ctrl+Shift+F | Open Advanced Search |
+| Esc | Close the find box |
 
 ## Requirements
 
@@ -62,8 +70,8 @@ PDFium calls run on a dedicated background worker, so rendering does not block t
 ## Project layout
 
 - `Models` holds small data types such as recent files, viewer tools, and text selections.
-- `Services/Pdf` holds the PDFium worker, document session, page renderer, and bitmap cache.
-- `ViewModels` holds the home screen, document, and page view models.
+- `Services/Pdf` holds the PDFium worker, document session, page renderer, bitmap cache, and search engine.
+- `ViewModels` holds the home screen, document, page, and search view models.
 - `Views` holds the main window, home screen, document viewer, toolbars, and dialogs.
 - `Styles` and `Themes` hold colors, icons, control styles, and theme variants.
 ## Releases

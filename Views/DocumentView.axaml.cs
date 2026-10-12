@@ -79,6 +79,8 @@ public partial class DocumentView : UserControl
         SelectionPopupHost.PointerExited += (_, _) => StartPopupHide();
         SelectionPopupHost.AddHandler(Button.ClickEvent, (_, _) => HidePopup(), RoutingStrategies.Bubble, true);
 
+        FindBarHost.ReturnFocusRequested += () => Focus();
+
         DataContextChanged += OnDataContextChanged;
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
     }
@@ -106,6 +108,7 @@ public partial class DocumentView : UserControl
         if (_vm is not null)
         {
             _vm.ScrollToPageRequested -= OnScrollToPageRequested;
+            _vm.ScrollToMatchRequested -= OnScrollToMatchRequested;
             _vm.PropertyChanged -= OnViewModelPropertyChanged;
             _vm.SetClipboardTextAsync = null;
             _vm.OnViewDetached();
@@ -118,6 +121,7 @@ public partial class DocumentView : UserControl
             return;
 
         _vm.ScrollToPageRequested += OnScrollToPageRequested;
+        _vm.ScrollToMatchRequested += OnScrollToMatchRequested;
         _vm.PropertyChanged += OnViewModelPropertyChanged;
         _vm.SetClipboardTextAsync = async text =>
         {
@@ -286,7 +290,10 @@ public partial class DocumentView : UserControl
 
     private void OnScrollToPageRequested(int index) => ScrollToPage(index, 0);
 
-    private void ScrollToPage(int index, double fraction, int attempt = 0)
+    private void OnScrollToMatchRequested(int index, double fraction) =>
+        ScrollToPage(index, fraction, viewportOffset: PageScroller.Viewport.Height / 3);
+
+    private void ScrollToPage(int index, double fraction, int attempt = 0, double viewportOffset = 0)
     {
         var container = PagesHost.ContainerFromIndex(index);
         if (container is null)
@@ -295,7 +302,8 @@ public partial class DocumentView : UserControl
                 return;
 
             PagesHost.ScrollIntoView(index);
-            Dispatcher.UIThread.Post(() => ScrollToPage(index, fraction, attempt + 1), DispatcherPriority.Background);
+            Dispatcher.UIThread.Post(() => ScrollToPage(index, fraction, attempt + 1, viewportOffset),
+                DispatcherPriority.Background);
             return;
         }
 
@@ -303,7 +311,7 @@ public partial class DocumentView : UserControl
         if (top is null)
             return;
 
-        var y = PagesHost.Margin.Top + top.Value.Y + fraction * container.Bounds.Height;
+        var y = PagesHost.Margin.Top + top.Value.Y + fraction * container.Bounds.Height - viewportOffset;
         if (fraction == 0)
             y -= DocumentViewModel.PageSpacing;
 
@@ -442,6 +450,8 @@ public partial class DocumentView : UserControl
         switch (e.Key)
         {
             case Key.Escape:
+                if (_vm.Search.IsOpen && !_vm.HasSelection)
+                    _vm.Search.CloseCommand.Execute(null);
                 _vm.ClearSelection();
                 HidePopup();
                 break;

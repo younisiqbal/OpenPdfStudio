@@ -146,6 +146,43 @@
     <Setter Property="Height" Value="16" />
   </Style>
 
+  <Style Selector="Button.menuRow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="CornerRadius" Value="5" />
+  </Style>
+  <Style Selector="Button.menuRow:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+  </Style>
+  <Style Selector="Button.menuRow PathIcon">
+    <Setter Property="Width" Value="15" />
+    <Setter Property="Height" Value="15" />
+  </Style>
+
+  <Style Selector="Button.result">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="CornerRadius" Value="5" />
+  </Style>
+  <Style Selector="Button.result:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+  </Style>
+
+  <Style Selector="Button.link">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentHoverBrush}" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="TextBlock.TextDecorations" Value="Underline" />
+  </Style>
+
   <Style Selector="Border.toolSeparator">
     <Setter Property="Width" Value="1" />
     <Setter Property="Margin" Value="6,6" />

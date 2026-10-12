@@ -34,6 +34,8 @@ public partial class PdfPageViewModel : ObservableObject, ICachedPageBitmap
     [ObservableProperty] private bool _isCurrent;
     [ObservableProperty] private bool _hasError;
     [ObservableProperty] private IReadOnlyList<Rect>? _selectionRects;
+    [ObservableProperty] private IReadOnlyList<Rect>? _searchRects;
+    [ObservableProperty] private IReadOnlyList<Rect>? _currentMatchRects;
     [ObservableProperty] private ITransform? _pageTransform;
 
     public int RenderedPixelWidth { get; private set; }

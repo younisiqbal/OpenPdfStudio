@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:OpenPdfStudio.ViewModels"
         xmlns:themes="using:OpenPdfStudio.Themes"
+        xmlns:views="using:OpenPdfStudio.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
@@ -24,6 +25,10 @@
     <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
     <KeyBinding Gesture="Ctrl+Subtract" Command="{Binding ZoomOutCommand}" />
     <KeyBinding Gesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
+    <KeyBinding Gesture="Ctrl+F" Command="{Binding FindCommand}" />
+    <KeyBinding Gesture="F3" Command="{Binding FindNextCommand}" />
+    <KeyBinding Gesture="Shift+F3" Command="{Binding FindPreviousCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding OpenAdvancedSearchCommand}" />
   </Window.KeyBindings>
 
   <DockPanel>
@@ -46,7 +51,10 @@
         <MenuItem Header="_Redo" InputGesture="Ctrl+Y" IsEnabled="False" />
         <Separator />
         <MenuItem Header="_Copy" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
-        <MenuItem Header="_Find..." InputGesture="Ctrl+F" IsEnabled="False" />
+        <MenuItem Header="_Find..." InputGesture="Ctrl+F" Command="{Binding FindCommand}" />
+        <MenuItem Header="Find _Next" InputGesture="F3" Command="{Binding FindNextCommand}" />
+        <MenuItem Header="Find _Previous" InputGesture="Shift+F3" Command="{Binding FindPreviousCommand}" />
+        <MenuItem Header="_Advanced Search..." InputGesture="Ctrl+Shift+F" Command="{Binding OpenAdvancedSearchCommand}" />
       </MenuItem>
       <MenuItem Header="_View">
         <MenuItem Header="Zoom _In" InputGesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
@@ -89,6 +97,9 @@
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,0,1"
             Padding="10,6,10,0">
+      <DockPanel>
+      <views:TopSearchBox DockPanel.Dock="Right" DataContext="{Binding TopSearch}"
+                          VerticalAlignment="Center" Margin="12,0,0,6" />
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Horizontal" Spacing="2">
           <Button Classes="tab" Classes.active="{Binding IsHomeActive}"
@@ -130,6 +141,7 @@
           </Button>
         </StackPanel>
       </ScrollViewer>
+      </DockPanel>
     </Border>
 
     <Border DockPanel.Dock="Left"
@@ -220,6 +232,10 @@
         </StackPanel>
       </DockPanel>
     </Border>
+
+    <Panel DockPanel.Dock="Right" IsVisible="{Binding AdvancedSearch.IsOpen}">
+      <views:AdvancedSearchPanel DataContext="{Binding AdvancedSearch}" />
+    </Panel>
 
     <ContentControl Content="{Binding CurrentPage}"
                     Background="{DynamicResource SystemRegionColor}" />

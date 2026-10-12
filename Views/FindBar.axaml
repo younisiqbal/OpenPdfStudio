@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             x:Class="OpenPdfStudio.Views.FindBar"
+             x:DataType="vm:DocumentSearchViewModel">
+  <Border Width="300"
+          IsVisible="{Binding IsOpen}"
+          Background="{DynamicResource SystemChromeLowColor}"
+          BorderBrush="{DynamicResource SystemBaseLowColor}"
+          BorderThickness="1"
+          CornerRadius="8"
+          Padding="12,8,12,12"
+          BoxShadow="0 6 20 0 #50000000">
+    <StackPanel Spacing="8">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Classes="tabClose" Command="{Binding CloseCommand}"
+                ToolTip.Tip="Close (Esc)">
+          <PathIcon Data="{StaticResource CloseIcon}" />
+        </Button>
+        <TextBlock Text="Search" Classes="muted" FontSize="13" VerticalAlignment="Center" />
+      </DockPanel>
+
+      <TextBox x:Name="QueryBox" Text="{Binding Query}" PlaceholderText="Find">
+        <TextBox.KeyBindings>
+          <KeyBinding Gesture="Enter" Command="{Binding NextCommand}" />
+          <KeyBinding Gesture="Shift+Enter" Command="{Binding PreviousCommand}" />
+        </TextBox.KeyBindings>
+        <TextBox.InnerRightContent>
+          <Button Classes="icon" Margin="0,0,2,0" ToolTip.Tip="Search options">
+            <Button.Flyout>
+              <MenuFlyout Placement="BottomEdgeAlignedRight">
+                <MenuItem Header="_Whole Words Only" Command="{Binding ToggleOptionCommand}" CommandParameter="WholeWords">
+                  <MenuItem.Icon>
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding WholeWords}" />
+                  </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Case Sensitive" Command="{Binding ToggleOptionCommand}" CommandParameter="CaseSensitive">
+                  <MenuItem.Icon>
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding CaseSensitive}" />
+                  </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Include _Page Text" Command="{Binding ToggleOptionCommand}" CommandParameter="IncludePageText">
+                  <MenuItem.Icon>
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IncludePageText}" />
+                  </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Include _Bookmarks" Command="{Binding ToggleOptionCommand}" CommandParameter="IncludeBookmarks">
+                  <MenuItem.Icon>
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IncludeBookmarks}" />
+                  </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Include Co_mments" Command="{Binding ToggleOptionCommand}" CommandParameter="IncludeComments">
+                  <MenuItem.Icon>
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IncludeComments}" />
+                  </MenuItem.Icon>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="_Highlight All Text" Command="{Binding ToggleOptionCommand}" CommandParameter="HighlightAll">
+                  <MenuItem.Icon>
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding HighlightAll}" />
+                  </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="P_roperties" Command="{Binding PropertiesCommand}" />
+              </MenuFlyout>
+            </Button.Flyout>
+            <PathIcon Data="{StaticResource SettingsIcon}" Width="14" Height="14" />
+          </Button>
+        </TextBox.InnerRightContent>
+      </TextBox>
+
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Right" Text="{Binding ResultText}" Classes="muted" FontSize="12"
+                   VerticalAlignment="Center" />
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Button Command="{Binding PreviousCommand}" ToolTip.Tip="Previous result (Shift+Enter, Shift+F3)"
+                  MinWidth="92" HorizontalContentAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <PathIcon Data="{StaticResource ChevronUpIcon}" Width="12" Height="12" />
+              <TextBlock Text="Previous" />
+            </StackPanel>
+          </Button>
+          <Button Command="{Binding NextCommand}" ToolTip.Tip="Next result (Enter, F3)"
+                  MinWidth="76" HorizontalContentAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <TextBlock Text="Next" />
+              <PathIcon Data="{StaticResource ChevronDownSmallIcon}" Width="12" Height="12" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </DockPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

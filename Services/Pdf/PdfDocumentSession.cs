@@ -35,6 +35,9 @@ public sealed class PdfDocumentSession : IDisposable
     private const double HitTolerance = 6;
     private const double LinePaddingX = 0.5;
     private const double LinePaddingY = 1;
+    private const int AnnotLink = 2;
+    private const int AnnotPopup = 16;
+    private const int AnnotWidget = 20;
 
     private readonly PdfiumWorker _worker;
     private readonly FpdfDocumentT _document;
@@ -42,6 +45,7 @@ public sealed class PdfDocumentSession : IDisposable
     private readonly Size[] _pageSizes;
     private readonly Dictionary<int, TextPage> _textPages = new();
     private readonly LinkedList<int> _textPageOrder = new();
+    private readonly Dictionary<int, string> _pageTexts = new();
     private volatile bool _disposed;
 
     private sealed record TextPage(FpdfPageT Page, FpdfTextpageT Text, int DeviceWidth, int DeviceHeight);
@@ -87,22 +91,117 @@ public sealed class PdfDocumentSession : IDisposable
         _worker.InvokeAsync<IReadOnlyList<Rect>>(() =>
         {
             ThrowIfDisposed();
-            var text = GetTextPage(pageIndex);
-            var rectCount = fpdf_text.FPDFTextCountRects(text.Text, startIndex, count);
-            var rects = new List<Rect>(Math.Max(rectCount, 0));
-            for (int i = 0; i < rectCount; i++)
-            {
-                double left = 0, top = 0, right = 0, bottom = 0;
-                if (fpdf_text.FPDFTextGetRect(text.Text, i, ref left, ref top, ref right, ref bottom) == 0)
-                    continue;
+            return ComputeTextRects(GetTextPage(pageIndex), startIndex, count);
+        });
 
-                var a = PageToDevice(text, left, top);
-                var b = PageToDevice(text, right, bottom);
-                rects.Add(new Rect(a, b).Normalize());
+    /// <summary>Returns every character on the page as one string. Cached for the life of the session.</summary>
+    public Task<string> GetPageTextAsync(int pageIndex, CancellationToken cancellationToken = default) =>
+        _worker.InvokeAsync(() =>
+        {
+            ThrowIfDisposed();
+            return ReadPageText(pageIndex);
+        }, cancellationToken, lowPriority: true);
+
+    /// <summary>Searches the text of one page and returns each match with its highlight rects.</summary>
+    public Task<IReadOnlyList<PdfSearchHit>> SearchPageTextAsync(int pageIndex, PdfSearchOptions options,
+        CancellationToken cancellationToken = default) =>
+        _worker.InvokeAsync<IReadOnlyList<PdfSearchHit>>(() =>
+        {
+            ThrowIfDisposed();
+            var pageText = ReadPageText(pageIndex);
+            var matches = TextMatcher.Find(pageText, options);
+            if (matches.Count == 0)
+                return [];
+
+            var text = GetTextPage(pageIndex);
+            var hits = new List<PdfSearchHit>(matches.Count);
+            foreach (var match in matches)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var rects = ComputeTextRects(text, match.Start, match.Length);
+                hits.Add(PdfSearchEngine.CreateHit(SearchResultKind.PageText, pageIndex, pageText, match, rects));
             }
 
-            return MergeIntoLines(rects);
-        });
+            return hits;
+        }, cancellationToken, lowPriority: true);
+
+    /// <summary>Returns the document outline, flattened in reading order.</summary>
+    public Task<IReadOnlyList<PdfBookmark>> GetBookmarksAsync(CancellationToken cancellationToken = default) =>
+        _worker.InvokeAsync<IReadOnlyList<PdfBookmark>>(() =>
+        {
+            ThrowIfDisposed();
+            var bookmarks = new List<PdfBookmark>();
+            var visited = new HashSet<IntPtr>();
+            CollectBookmarks(fpdf_doc.FPDFBookmarkGetFirstChild(_document, null), 0, bookmarks, visited);
+            return bookmarks;
+        }, cancellationToken, lowPriority: true);
+
+    /// <summary>Returns the text of comments and markup annotations on a page. Links and form fields are skipped.</summary>
+    public Task<IReadOnlyList<PdfComment>> GetCommentsAsync(int pageIndex, CancellationToken cancellationToken = default) =>
+        _worker.InvokeAsync<IReadOnlyList<PdfComment>>(() =>
+        {
+            ThrowIfDisposed();
+            var text = GetTextPage(pageIndex);
+            var count = fpdf_annot.FPDFPageGetAnnotCount(text.Page);
+            var comments = new List<PdfComment>();
+
+            for (int i = 0; i < count; i++)
+            {
+                var annot = fpdf_annot.FPDFPageGetAnnot(text.Page, i);
+                if (PdfHandles.IsNull(annot))
+                    continue;
+
+                try
+                {
+                    var subtype = fpdf_annot.FPDFAnnotGetSubtype(annot);
+                    if (subtype is AnnotLink or AnnotPopup or AnnotWidget)
+                        continue;
+
+                    var contents = ReadUtf16((ref ushort buffer, ulong length) =>
+                        fpdf_annot.FPDFAnnotGetStringValue(annot, "Contents", ref buffer, length));
+                    if (string.IsNullOrWhiteSpace(contents))
+                        continue;
+
+                    var bounds = new Rect();
+                    var rect = new FS_RECTF_();
+                    if (fpdf_annot.FPDFAnnotGetRect(annot, rect) != 0)
+                    {
+                        var a = PageToDevice(text, rect.Left, rect.Top);
+                        var b = PageToDevice(text, rect.Right, rect.Bottom);
+                        bounds = new Rect(a, b).Normalize();
+                    }
+
+                    comments.Add(new PdfComment(contents, bounds));
+                }
+                finally
+                {
+                    fpdf_annot.FPDFPageCloseAnnot(annot);
+                }
+            }
+
+            return comments;
+        }, cancellationToken, lowPriority: true);
+
+    public Task<IReadOnlyList<string>> GetAttachmentNamesAsync(CancellationToken cancellationToken = default) =>
+        _worker.InvokeAsync<IReadOnlyList<string>>(() =>
+        {
+            ThrowIfDisposed();
+            var count = fpdf_attachment.FPDFDocGetAttachmentCount(_document);
+            var names = new List<string>(Math.Max(count, 0));
+            for (int i = 0; i < count; i++)
+            {
+                var attachment = fpdf_attachment.FPDFDocGetAttachment(_document, i);
+                if (PdfHandles.IsNull(attachment))
+                    continue;
+
+                var name = ReadUtf16((ref ushort buffer, ulong length) =>
+                    fpdf_attachment.FPDFAttachmentGetName(attachment, ref buffer, length));
+                if (!string.IsNullOrEmpty(name))
+                    names.Add(name);
+            }
+
+            return names;
+        }, cancellationToken, lowPriority: true);
 
     public Task<string> GetTextAsync(int pageIndex, int startIndex, int count) =>
         _worker.InvokeAsync(() =>
@@ -214,6 +313,105 @@ public sealed class PdfDocumentSession : IDisposable
         return entry;
     }
 
+    private string ReadPageText(int pageIndex)
+    {
+        if (_pageTexts.TryGetValue(pageIndex, out var cached))
+            return cached;
+
+        var text = GetTextPage(pageIndex);
+        var count = fpdf_text.FPDFTextCountChars(text.Text);
+        var value = string.Empty;
+        if (count > 0)
+        {
+            var buffer = new ushort[count + 1];
+            var written = fpdf_text.FPDFTextGetText(text.Text, 0, count, ref buffer[0]);
+            var length = Math.Clamp(written - 1, 0, count);
+            value = new string(MemoryMarshal.Cast<ushort, char>(buffer.AsSpan(0, length)));
+        }
+
+        _pageTexts[pageIndex] = value;
+        return value;
+    }
+
+    private static List<Rect> ComputeTextRects(TextPage text, int startIndex, int count)
+    {
+        var rectCount = fpdf_text.FPDFTextCountRects(text.Text, startIndex, count);
+        var rects = new List<Rect>(Math.Max(rectCount, 0));
+        for (int i = 0; i < rectCount; i++)
+        {
+            double left = 0, top = 0, right = 0, bottom = 0;
+            if (fpdf_text.FPDFTextGetRect(text.Text, i, ref left, ref top, ref right, ref bottom) == 0)
+                continue;
+
+            var a = PageToDevice(text, left, top);
+            var b = PageToDevice(text, right, bottom);
+            rects.Add(new Rect(a, b).Normalize());
+        }
+
+        return MergeIntoLines(rects);
+    }
+
+    private void CollectBookmarks(FpdfBookmarkT? bookmark, int depth, List<PdfBookmark> into, HashSet<IntPtr> visited)
+    {
+        while (!PdfHandles.IsNull(bookmark) && visited.Add(bookmark!.__Instance))
+        {
+            var title = ReadBookmarkTitle(bookmark);
+            into.Add(new PdfBookmark(title, depth, BookmarkPageIndex(bookmark)));
+            CollectBookmarks(fpdf_doc.FPDFBookmarkGetFirstChild(_document, bookmark), depth + 1, into, visited);
+            bookmark = fpdf_doc.FPDFBookmarkGetNextSibling(_document, bookmark);
+        }
+    }
+
+    private static string ReadBookmarkTitle(FpdfBookmarkT bookmark)
+    {
+        var bytes = fpdf_doc.FPDFBookmarkGetTitle(bookmark, IntPtr.Zero, 0);
+        if (bytes <= 2)
+            return string.Empty;
+
+        var buffer = Marshal.AllocHGlobal((int)bytes);
+        try
+        {
+            fpdf_doc.FPDFBookmarkGetTitle(bookmark, buffer, bytes);
+            return Marshal.PtrToStringUni(buffer, (int)(bytes / 2) - 1) ?? string.Empty;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
+    private int BookmarkPageIndex(FpdfBookmarkT bookmark)
+    {
+        var dest = fpdf_doc.FPDFBookmarkGetDest(_document, bookmark);
+        if (PdfHandles.IsNull(dest))
+        {
+            var action = fpdf_doc.FPDFBookmarkGetAction(bookmark);
+            if (PdfHandles.IsNull(action))
+                return -1;
+            dest = fpdf_doc.FPDFActionGetDest(_document, action);
+            if (PdfHandles.IsNull(dest))
+                return -1;
+        }
+
+        var index = fpdf_doc.FPDFDestGetDestPageIndex(_document, dest);
+        return index >= 0 && index < _pageSizes.Length ? index : -1;
+    }
+
+    private delegate ulong Utf16Reader(ref ushort buffer, ulong length);
+
+    /// <summary>Reads a UTF-16LE string from a PDFium API that reports its size in bytes, terminator included.</summary>
+    private static string ReadUtf16(Utf16Reader read)
+    {
+        ushort probe = 0;
+        var bytes = read(ref probe, 0);
+        if (bytes <= 2)
+            return string.Empty;
+
+        var buffer = new ushort[bytes / 2];
+        read(ref buffer[0], bytes);
+        return new string(MemoryMarshal.Cast<ushort, char>(buffer.AsSpan(0, buffer.Length - 1)));
+    }
+
     /// <summary>
     /// Joins PDFium's per-run rects into one box per line so the highlight has an even height.
     /// Runs far apart on the same baseline (for example two columns) stay separate.
@@ -272,6 +470,7 @@ public sealed class PdfDocumentSession : IDisposable
 
         _textPages.Clear();
         _textPageOrder.Clear();
+        _pageTexts.Clear();
         fpdfview.FPDF_CloseDocument(_document);
 
         if (_buffer != IntPtr.Zero)

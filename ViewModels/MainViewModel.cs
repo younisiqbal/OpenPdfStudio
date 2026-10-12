@@ -27,7 +27,8 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsHomeActive), nameof(HasActiveDocument))]
     [NotifyCanExecuteChangedFor(nameof(ZoomInCommand), nameof(ZoomOutCommand), nameof(FitWidthCommand),
-        nameof(FitPageCommand), nameof(CloseActiveTabCommand), nameof(CopySelectionCommand))]
+        nameof(FitPageCommand), nameof(CloseActiveTabCommand), nameof(CopySelectionCommand),
+        nameof(FindCommand), nameof(FindNextCommand), nameof(FindPreviousCommand))]
     private DocumentViewModel? _activeDocument;
 
     [ObservableProperty]
@@ -46,6 +47,8 @@ public partial class MainViewModel : ViewModelBase
 
     public HomeViewModel Home { get; }
     public ObservableCollection<DocumentViewModel> Documents { get; } = new();
+    public AdvancedSearchViewModel AdvancedSearch { get; }
+    public TopSearchViewModel TopSearch { get; }
 
     public Func<Task<string?>>? PickPdfAsync { get; set; }
     public Action? RequestClose { get; set; }
@@ -59,6 +62,9 @@ public partial class MainViewModel : ViewModelBase
     public MainViewModel()
     {
         Home = new HomeViewModel(s => Status = s, OpenPdfAsync, OpenPathAsync);
+        AdvancedSearch = new AdvancedSearchViewModel(() => ActiveDocument, () => Documents.ToList(),
+            OpenAndGetDocumentAsync, s => Status = s);
+        TopSearch = new TopSearchViewModel(() => ActiveDocument, AdvancedSearch, s => Status = s);
         _currentPage = Home;
         ApplyTheme(LoadSavedTheme());
     }
@@ -71,6 +77,7 @@ public partial class MainViewModel : ViewModelBase
             newValue.IsActive = true;
 
         CurrentPage = (ViewModelBase?)newValue ?? Home;
+        TopSearch.OnActiveDocumentChanged();
     }
 
     [RelayCommand]
@@ -106,6 +113,30 @@ public partial class MainViewModel : ViewModelBase
     {
         if (ActiveDocument?.CopySelectionCommand.CanExecute(null) == true)
             ActiveDocument.CopySelectionCommand.Execute(null);
+    }
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private async Task Find()
+    {
+        if (ActiveDocument is not { } document)
+            return;
+
+        var selected = await document.GetSelectedTextAsync();
+        var initial = selected is { Length: > 0 and <= 100 } && !selected.Contains('\n') ? selected.Trim() : null;
+        document.Search.Open(initial);
+    }
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private void FindNext() => ActiveDocument?.Search.NextCommand.Execute(null);
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private void FindPrevious() => ActiveDocument?.Search.PreviousCommand.Execute(null);
+
+    [RelayCommand]
+    private void OpenAdvancedSearch()
+    {
+        var query = ActiveDocument?.Search.Query;
+        AdvancedSearch.Open(string.IsNullOrWhiteSpace(query) ? null : ActiveDocument!.Search.Options);
     }
 
     [RelayCommand]
@@ -156,6 +187,7 @@ public partial class MainViewModel : ViewModelBase
             {
                 var session = await PdfDocumentSession.OpenAsync(fullPath, password);
                 var document = new DocumentViewModel(session, s => Status = s, ActivateDocument, CloseDocument);
+                document.Search.OpenAdvancedSearch = options => AdvancedSearch.Open(options);
                 Documents.Add(document);
                 ActivateDocument(document);
                 Home.AddOpenedFile(fullPath);
@@ -187,6 +219,17 @@ public partial class MainViewModel : ViewModelBase
                 return;
             }
         }
+    }
+
+    /// <summary>Opens the file (or switches to its tab) and returns its document, or null if it could not be opened.</summary>
+    private async Task<DocumentViewModel?> OpenAndGetDocumentAsync(string path)
+    {
+        await OpenPathAsync(path);
+        var document = Documents.FirstOrDefault(d =>
+            string.Equals(d.FilePath, Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase));
+        if (document is not null && ActiveDocument != document)
+            ActivateDocument(document);
+        return document;
     }
 
     public void DisposeAll()

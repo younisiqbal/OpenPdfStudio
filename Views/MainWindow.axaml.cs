@@ -25,6 +25,7 @@ public partial class MainWindow : Window
             _vm.RequestClose = null;
             _vm.RequestPasswordAsync = null;
             _vm.ShowErrorAsync = null;
+            _vm.AdvancedSearch.PickFolderAsync = null;
         }
 
         _vm = DataContext as MainViewModel;
@@ -35,6 +36,18 @@ public partial class MainWindow : Window
         _vm.RequestClose = Close;
         _vm.RequestPasswordAsync = (fileName, error) => new PasswordDialog(fileName, error).ShowDialog<string?>(this);
         _vm.ShowErrorAsync = (title, message) => new MessageDialog(title, message).ShowDialog(this);
+        _vm.AdvancedSearch.PickFolderAsync = PickFolderAsync;
+    }
+
+    private async Task<string?> PickFolderAsync()
+    {
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Choose a folder to search",
+            AllowMultiple = false
+        });
+
+        return folders.Count == 0 ? null : folders[0].TryGetLocalPath();
     }
 
     private async Task<string?> PickPdfAsync()
