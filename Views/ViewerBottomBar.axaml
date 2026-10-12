@@ -10,10 +10,6 @@
     <DockPanel>
 
       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-        <Button Classes="icon" Classes.active="{Binding IsThumbnailsVisible}"
-                Command="{Binding ToggleThumbnailsCommand}" ToolTip.Tip="Show or hide page thumbnails">
-          <PathIcon Data="{StaticResource OutlineIcon}" />
-        </Button>
         <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Print" ToolTip.Tip="Print (coming soon)">
           <PathIcon Data="{StaticResource PrintIcon}" />
         </Button>

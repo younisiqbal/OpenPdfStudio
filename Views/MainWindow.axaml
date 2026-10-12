@@ -102,9 +102,6 @@
                           VerticalAlignment="Center" Margin="12,0,0,6" />
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Horizontal" Spacing="2">
-          <Button Classes="tab" Classes.active="{Binding IsHomeActive}"
-                  Command="{Binding ShowHomeCommand}" Content="Home" />
-
           <ItemsControl ItemsSource="{Binding Documents}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
@@ -148,8 +145,21 @@
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,1,0"
-            Padding="6,16"
+            Padding="6,8"
             Width="76">
+      <Border.Styles>
+        <Style Selector="Button.nav">
+          <Setter Property="Padding" Value="0,6" />
+        </Style>
+        <Style Selector="Button.nav PathIcon">
+          <Setter Property="Width" Value="16" />
+          <Setter Property="Height" Value="16" />
+        </Style>
+        <Style Selector="Button.nav PathIcon.chevron">
+          <Setter Property="Width" Value="7" />
+          <Setter Property="Height" Value="7" />
+        </Style>
+      </Border.Styles>
       <DockPanel>
         <Button DockPanel.Dock="Bottom" Classes="nav" ToolTip.Tip="Change theme">
           <Button.Flyout>
@@ -197,39 +207,53 @@
               </MenuItem>
             </MenuFlyout>
           </Button.Flyout>
-          <StackPanel Spacing="4">
+          <StackPanel Spacing="2">
             <PathIcon Data="{StaticResource PaletteIcon}" />
             <TextBlock Text="Theme" FontSize="11" HorizontalAlignment="Center" />
           </StackPanel>
         </Button>
 
-        <StackPanel Spacing="4">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+        <StackPanel Spacing="2">
           <Button Classes="nav" Classes.active="{Binding IsHomeActive}" ToolTip.Tip="Home"
                   Command="{Binding ShowHomeCommand}">
-            <StackPanel Spacing="4">
+            <StackPanel Spacing="2">
               <PathIcon Data="{StaticResource HomeIcon}" />
               <TextBlock Text="Home" FontSize="11" HorizontalAlignment="Center" />
             </StackPanel>
           </Button>
+          <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsThumbnailsVisible, FallbackValue=False}"
+                  Command="{Binding ActiveDocument.ToggleThumbnailsCommand, FallbackValue={x:Null}}"
+                  IsVisible="{Binding HasActiveDocument}"
+                  ToolTip.Tip="Show or hide page thumbnails">
+            <StackPanel Spacing="2">
+              <PathIcon Data="{StaticResource OutlineIcon}" />
+              <TextBlock Text="Pages" FontSize="11" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Button>
           <Button Classes="nav" ToolTip.Tip="Recent files" Command="{Binding ShowHomeCommand}">
-            <StackPanel Spacing="4">
+            <StackPanel Spacing="2">
               <PathIcon Data="{StaticResource RecentIcon}" />
               <TextBlock Text="Recent" FontSize="11" HorizontalAlignment="Center" />
             </StackPanel>
           </Button>
           <Button Classes="nav" ToolTip.Tip="Starred files" Command="{Binding ShowHomeCommand}">
-            <StackPanel Spacing="4">
+            <StackPanel Spacing="2">
               <PathIcon Data="{StaticResource StarIcon}" />
               <TextBlock Text="Starred" FontSize="11" HorizontalAlignment="Center" />
             </StackPanel>
           </Button>
           <Button Classes="nav" IsEnabled="False" ToolTip.Tip="Settings — coming soon">
-            <StackPanel Spacing="4">
+            <StackPanel Spacing="2">
               <PathIcon Data="{StaticResource SettingsIcon}" />
               <TextBlock Text="Settings" FontSize="11" HorizontalAlignment="Center" />
             </StackPanel>
           </Button>
+
+          <views:ViewerTopBar DataContext="{Binding ActiveDocument}"
+                              IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).HasActiveDocument}" />
         </StackPanel>
+        </ScrollViewer>
       </DockPanel>
     </Border>
 

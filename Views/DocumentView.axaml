@@ -29,7 +29,6 @@
   </UserControl.Styles>
 
   <DockPanel>
-    <views:ViewerTopBar DockPanel.Dock="Top" />
     <views:ViewerBottomBar DockPanel.Dock="Bottom" />
 
     <Border DockPanel.Dock="Left"
