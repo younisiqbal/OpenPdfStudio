@@ -75,6 +75,16 @@ public partial class PdfPageViewModel : ObservableObject, ICachedPageBitmap
         previous?.Dispose();
     }
 
+    /// <summary>Marks the page as out of date after an edit. The old bitmap stays on screen until the new one is ready.</summary>
+    public void Invalidate()
+    {
+        RenderCts?.Cancel();
+        PendingPixelWidth = 0;
+        RenderedPixelWidth = 0;
+        ThumbnailCts?.Cancel();
+        ThumbnailCts = null;
+    }
+
     public void ReleaseThumbnail()
     {
         ThumbnailCts?.Cancel();

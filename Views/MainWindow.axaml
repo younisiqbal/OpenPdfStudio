@@ -30,11 +30,26 @@
     <KeyBinding Gesture="Shift+F3" Command="{Binding FindPreviousCommand}" />
     <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding OpenAdvancedSearchCommand}" />
     <KeyBinding Gesture="Ctrl+R" Command="{Binding ToggleRulerCommand}" />
+    <KeyBinding Gesture="Ctrl+V" Command="{Binding PasteCommand}" />
+    <KeyBinding Gesture="Ctrl+Alt+V" Command="{Binding PasteInPlaceCommand}" />
+    <KeyBinding Gesture="Ctrl+H" Command="{Binding ToggleReadModeCommand}" />
+    <KeyBinding Gesture="F11" Command="{Binding ToggleFullScreenCommand}" />
+    <KeyBinding Gesture="Ctrl+D1" Command="{Binding ActualSizeCommand}" />
+    <KeyBinding Gesture="Ctrl+NumPad1" Command="{Binding ActualSizeCommand}" />
+    <KeyBinding Gesture="Ctrl+D0" Command="{Binding FitPageCommand}" />
+    <KeyBinding Gesture="Ctrl+NumPad0" Command="{Binding FitPageCommand}" />
+    <KeyBinding Gesture="Ctrl+D2" Command="{Binding FitWidthCommand}" />
+    <KeyBinding Gesture="Ctrl+NumPad2" Command="{Binding FitWidthCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+OemPlus" Command="{Binding RotateClockwiseCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+Add" Command="{Binding RotateClockwiseCommand}" />
+    <KeyBinding Gesture="Ctrl+P" Command="{Binding PrintCommand}" />
+    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveAsCommand}" />
   </Window.KeyBindings>
 
   <DockPanel>
 
-    <Menu DockPanel.Dock="Top">
+    <Menu DockPanel.Dock="Top" IsVisible="{Binding IsChromeVisible}">
       <MenuItem Header="_File">
         <MenuItem Header="_Open..." InputGesture="Ctrl+O" Command="{Binding OpenFileCommand}" />
         <MenuItem Header="Open _Recent">
@@ -42,8 +57,10 @@
         </MenuItem>
         <MenuItem Header="_Close tab" InputGesture="Ctrl+W" Command="{Binding CloseActiveTabCommand}" />
         <Separator />
-        <MenuItem Header="_Save" InputGesture="Ctrl+S" IsEnabled="False" />
-        <MenuItem Header="Save _As..." InputGesture="Ctrl+Shift+S" IsEnabled="False" />
+        <MenuItem Header="_Save" InputGesture="Ctrl+S" Command="{Binding SaveCommand}" />
+        <MenuItem Header="Save _As..." InputGesture="Ctrl+Shift+S" Command="{Binding SaveAsCommand}" />
+        <Separator />
+        <MenuItem Header="_Print..." InputGesture="Ctrl+P" Command="{Binding PrintCommand}" />
         <Separator />
         <MenuItem Header="E_xit" InputGesture="Alt+F4" Command="{Binding ExitCommand}" />
       </MenuItem>
@@ -52,6 +69,9 @@
         <MenuItem Header="_Redo" InputGesture="Ctrl+Y" IsEnabled="False" />
         <Separator />
         <MenuItem Header="_Copy" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
+        <MenuItem Header="_Paste" InputGesture="Ctrl+V" Command="{Binding PasteCommand}" />
+        <MenuItem Header="Paste in Pla_ce" InputGesture="Ctrl+Alt+V" Command="{Binding PasteInPlaceCommand}" />
+        <Separator />
         <MenuItem Header="_Find..." InputGesture="Ctrl+F" Command="{Binding FindCommand}" />
         <MenuItem Header="Find _Next" InputGesture="F3" Command="{Binding FindNextCommand}" />
         <MenuItem Header="Find _Previous" InputGesture="Shift+F3" Command="{Binding FindPreviousCommand}" />
@@ -60,8 +80,29 @@
       <MenuItem Header="_View">
         <MenuItem Header="Zoom _In" InputGesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
         <MenuItem Header="Zoom _Out" InputGesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
-        <MenuItem Header="Fit _Width" Command="{Binding FitWidthCommand}" />
-        <MenuItem Header="Fit _Page" Command="{Binding FitPageCommand}" />
+        <MenuItem Header="_Actual Size" InputGesture="Ctrl+1" Command="{Binding ActualSizeCommand}">
+          <MenuItem.Icon>
+            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                      IsVisible="{Binding ActiveDocument.IsActualSize, FallbackValue=False}" />
+          </MenuItem.Icon>
+        </MenuItem>
+        <MenuItem Header="Fit _Page" InputGesture="Ctrl+0" Command="{Binding FitPageCommand}">
+          <MenuItem.Icon>
+            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                      IsVisible="{Binding ActiveDocument.IsFitPage, FallbackValue=False}" />
+          </MenuItem.Icon>
+        </MenuItem>
+        <MenuItem Header="Fit _Width" InputGesture="Ctrl+2" Command="{Binding FitWidthCommand}">
+          <MenuItem.Icon>
+            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                      IsVisible="{Binding ActiveDocument.IsFitWidth, FallbackValue=False}" />
+          </MenuItem.Icon>
+        </MenuItem>
+        <Separator />
+        <MenuItem Header="Rotate _Right" InputGesture="Ctrl+Shift+OemPlus" Command="{Binding RotateClockwiseCommand}" />
+        <Separator />
+        <MenuItem Header="Rea_d Mode" InputGesture="Ctrl+H" Command="{Binding ToggleReadModeCommand}" />
+        <MenuItem Header="_Full Screen" InputGesture="F11" Command="{Binding ToggleFullScreenCommand}" />
         <Separator />
         <MenuItem Header="_Ruler" InputGesture="Ctrl+R" Command="{Binding ToggleRulerCommand}">
           <MenuItem.Icon>
@@ -87,6 +128,7 @@
     </Menu>
 
     <Border DockPanel.Dock="Bottom"
+            IsVisible="{Binding IsChromeVisible}"
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,1,0,0"
@@ -101,6 +143,7 @@
     </Border>
 
     <Border DockPanel.Dock="Top"
+            IsVisible="{Binding IsChromeVisible}"
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,0,1"
@@ -127,6 +170,9 @@
                             Background="{DynamicResource PdfBadgeBrush}" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding FileName}" MaxWidth="180"
                                TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <Ellipse Width="7" Height="7" Fill="{DynamicResource AccentBrush}"
+                             VerticalAlignment="Center" IsVisible="{Binding IsModified}"
+                             ToolTip.Tip="Unsaved changes" />
                     <Button Classes="tabClose" Command="{Binding CloseCommand}"
                             ToolTip.Tip="Close (Ctrl+W)" VerticalAlignment="Center">
                       <PathIcon Data="{StaticResource CloseIcon}" />
@@ -150,6 +196,7 @@
     </Border>
 
     <Border DockPanel.Dock="Left"
+            IsVisible="{Binding IsChromeVisible}"
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,1,0"
@@ -269,7 +316,15 @@
       <views:AdvancedSearchPanel DataContext="{Binding AdvancedSearch}" />
     </Panel>
 
-    <ContentControl Content="{Binding CurrentPage}"
-                    Background="{DynamicResource SystemRegionColor}" />
+    <Panel>
+      <ContentControl Content="{Binding CurrentPage}"
+                      Background="{DynamicResource SystemRegionColor}" />
+      <Button Classes="primary"
+              IsVisible="{Binding IsPresenting}"
+              Command="{Binding ExitPresentationModeCommand}"
+              Content="{Binding PresentationExitText}"
+              HorizontalAlignment="Center" VerticalAlignment="Bottom"
+              Margin="0,0,0,20" Opacity="0.85" />
+    </Panel>
   </DockPanel>
 </Window>

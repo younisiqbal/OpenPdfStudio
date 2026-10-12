@@ -76,6 +76,13 @@ public partial class DocumentSearchViewModel : ObservableObject, IDisposable
 
     partial void OnHighlightAllChanged(bool value) => ApplyAllHighlights();
 
+    /// <summary>Re-runs an active search so pasted text is found and stale highlights are dropped.</summary>
+    public void OnDocumentEdited()
+    {
+        if (!string.IsNullOrWhiteSpace(Query) && (IsOpen || _hits.Count > 0))
+            ScheduleSearch();
+    }
+
     public void Open(string? initialQuery = null, bool? highlightAll = null)
     {
         if (highlightAll is { } highlight)

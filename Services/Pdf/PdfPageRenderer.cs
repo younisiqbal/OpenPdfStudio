@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -11,6 +12,7 @@ internal static class PdfPageRenderer
 {
     private const int BitmapFormatBgra = 4;
     private const int RenderAnnotations = 0x01;
+    private const int RenderForPrinting = 0x800;
     private const ulong White = 0xFFFFFFFF;
 
     public static WriteableBitmap Render(FpdfDocumentT document, int pageIndex, int pixelWidth, int pixelHeight)
@@ -53,6 +55,42 @@ internal static class PdfPageRenderer
         }
 
         return bitmap;
+    }
+
+    /// <summary>Renders into a packed BGRA buffer (stride = width * 4) on a white background.</summary>
+    public static byte[] RenderToBuffer(FpdfDocumentT document, int pageIndex, int pixelWidth, int pixelHeight, bool forPrinting)
+    {
+        var page = fpdfview.FPDF_LoadPage(document, pageIndex);
+        if (PdfHandles.IsNull(page))
+            throw new InvalidOperationException($"Page {pageIndex + 1} could not be loaded.");
+
+        var pixels = new byte[pixelWidth * pixelHeight * 4];
+        var handle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
+        try
+        {
+            var target = fpdfview.FPDFBitmapCreateEx(pixelWidth, pixelHeight, BitmapFormatBgra,
+                handle.AddrOfPinnedObject(), pixelWidth * 4);
+            if (PdfHandles.IsNull(target))
+                throw new InvalidOperationException("PDFium could not allocate a render target.");
+
+            try
+            {
+                var flags = RenderAnnotations | (forPrinting ? RenderForPrinting : 0);
+                fpdfview.FPDFBitmapFillRect(target, 0, 0, pixelWidth, pixelHeight, White);
+                fpdfview.FPDF_RenderPageBitmap(target, page, 0, 0, pixelWidth, pixelHeight, 0, flags);
+            }
+            finally
+            {
+                fpdfview.FPDFBitmapDestroy(target);
+            }
+        }
+        finally
+        {
+            handle.Free();
+            fpdfview.FPDF_ClosePage(page);
+        }
+
+        return pixels;
     }
 }
 

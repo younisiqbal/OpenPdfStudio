@@ -20,6 +20,11 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 - Rotate the page view.
 - Hand tool for panning, with a choice of cursor styles.
 - Select text on a page and copy it to the clipboard.
+- Right-click a page for Paste, Read Mode, Full Screen, zoom and fit options, Rotate Right, Print, and Rulers.
+- Paste text or an image from the clipboard onto a page. Paste puts it where you right-clicked (or under the pointer). Paste in Place puts text copied from a PDF back at the same spot. Pasted text uses Helvetica, so it covers Western European characters only.
+- Save (Ctrl+S) and Save As (Ctrl+Shift+S) keep pasted changes. A dot on the tab marks unsaved changes, and you are asked before a modified file is closed.
+- Read Mode (Ctrl+H) and Full Screen (F11) hide the menus, tabs, toolbars, and thumbnails. Press Esc to leave.
+- Print (Ctrl+P) with a choice of printer, copies, page range, and orientation. Printing uses the Windows print system on Windows and CUPS (`lp`) on Linux and macOS.
 - Rulers along the top and left of the page that measure the current page in inches or centimeters. Turn them on from the Ruler button in the left toolbar, View > Ruler, or Ctrl+R, and right-click a ruler to change the unit.
 - Find box (Ctrl+F) in the top-right corner of the page. It highlights every match, steps through them with Previous and Next, and has a gear menu with Whole Words Only, Case Sensitive, Include Page Text, Include Bookmarks, Include Comments, and Highlight All Text.
 - Search box in the tab row with recently used searches, Show matching text results, Advanced Search, and Search & Highlight.
@@ -32,15 +37,26 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 | --- | --- |
 | Ctrl+O | Open a file |
 | Ctrl+W | Close the current tab |
+| Ctrl+S | Save |
+| Ctrl+Shift+S | Save As |
+| Ctrl+P | Print |
 | Ctrl+Plus | Zoom in |
 | Ctrl+Minus | Zoom out |
+| Ctrl+1 | Actual size |
+| Ctrl+0 | Fit page |
+| Ctrl+2 | Fit width |
+| Ctrl+Shift+Plus | Rotate the view right |
 | Ctrl+C | Copy selected text |
+| Ctrl+V | Paste onto the page |
+| Ctrl+Alt+V | Paste in place |
+| Ctrl+H | Read Mode |
+| F11 | Full Screen |
 | Ctrl+R | Show or hide the ruler |
 | Ctrl+F | Open the find box |
 | F3 / Enter | Next match |
 | Shift+F3 / Shift+Enter | Previous match |
 | Ctrl+Shift+F | Open Advanced Search |
-| Esc | Close the find box |
+| Esc | Close the find box, or leave Read Mode and Full Screen |
 
 ## Requirements
 

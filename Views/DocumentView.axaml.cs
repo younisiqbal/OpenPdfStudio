@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
@@ -9,9 +11,13 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using OpenPdfStudio.Models;
 using OpenPdfStudio.Services;
+using OpenPdfStudio.Services.Pdf;
 using OpenPdfStudio.ViewModels;
 using OpenPdfStudio.Views.Controls;
 
@@ -41,6 +47,9 @@ public partial class DocumentView : UserControl
 
     private (int PageIndex, double Fraction)? _zoomAnchor;
 
+    private bool _hasContextAnchor;
+    private (PdfPageViewModel Page, Point PointInPoints)? _contextAnchor;
+
     public DocumentView()
     {
         InitializeComponent();
@@ -67,6 +76,7 @@ public partial class DocumentView : UserControl
         PageScroller.AddHandler(PointerMovedEvent, (_, e) => UpdateRulerPointer(e.GetPosition(PageScroller)),
             RoutingStrategies.Tunnel, handledEventsToo: true);
         PageArea.AddHandler(ContextRequestedEvent, OnPageAreaContextRequested, RoutingStrategies.Tunnel);
+        PageContextMenu.Closed += OnPageContextMenuClosed;
 
         ThumbnailHost.ContainerPrepared += (_, e) =>
         {
@@ -115,6 +125,8 @@ public partial class DocumentView : UserControl
             _vm.ScrollToMatchRequested -= OnScrollToMatchRequested;
             _vm.PropertyChanged -= OnViewModelPropertyChanged;
             _vm.SetClipboardTextAsync = null;
+            _vm.ReadClipboardAsync = null;
+            _vm.GetPasteAnchor = null;
             _vm.OnViewDetached();
         }
 
@@ -132,6 +144,8 @@ public partial class DocumentView : UserControl
             if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
                 await clipboard.SetTextAsync(text);
         };
+        _vm.ReadClipboardAsync = ReadClipboardAsync;
+        _vm.GetPasteAnchor = GetPasteAnchor;
 
         if (TopLevel.GetTopLevel(this) is { } topLevel)
             _vm.RenderScaling = topLevel.RenderScaling;
@@ -338,11 +352,88 @@ public partial class DocumentView : UserControl
         LeftRuler.PointerPosition = PageScroller.TranslatePoint(position, LeftRuler)?.Y;
     }
 
+    /// <summary>
+    /// The ruler menu belongs to the rulers and the page menu to the page scroller; anything else in the
+    /// page area (find bar, selection popup) gets no menu.
+    /// </summary>
     private void OnPageAreaContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        if (e.Source is not Visual source ||
-            !(ReferenceEquals(source, TopRuler) || ReferenceEquals(source, LeftRuler) || ReferenceEquals(source, RulerCorner)))
+        if (e.Source is not Visual source)
+        {
             e.Handled = true;
+            return;
+        }
+
+        if (ReferenceEquals(source, TopRuler) || ReferenceEquals(source, LeftRuler) || ReferenceEquals(source, RulerCorner))
+            return;
+
+        if (!ReferenceEquals(source, PageScroller) && !PageScroller.IsVisualAncestorOf(source))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        HidePopup();
+        _contextAnchor = e.TryGetPosition(PageScroller, out var position) ? HitTestPage(position) : null;
+        _hasContextAnchor = true;
+    }
+
+    private void OnPageContextMenuClosed(object? sender, RoutedEventArgs e) =>
+        Dispatcher.UIThread.Post(() => _hasContextAnchor = false, DispatcherPriority.Background);
+
+    private (int PageIndex, Point Point)? GetPasteAnchor()
+    {
+        if (_hasContextAnchor)
+        {
+            _hasContextAnchor = false;
+            return _contextAnchor is { } hit ? (hit.Page.Index, hit.PointInPoints) : null;
+        }
+
+        return PageScroller.IsPointerOver && HitTestPage(_lastPointer) is { } pointer
+            ? (pointer.Page.Index, pointer.PointInPoints)
+            : null;
+    }
+
+    private async Task<ClipboardContent?> ReadClipboardAsync()
+    {
+        if (TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
+            return null;
+
+        var text = await clipboard.TryGetTextAsync();
+        if (!string.IsNullOrWhiteSpace(text))
+            return new ClipboardContent(text, null);
+
+        using var bitmap = await clipboard.TryGetBitmapAsync();
+        return bitmap is null ? null : new ClipboardContent(null, ToImageData(bitmap));
+    }
+
+    /// <summary>Copies a bitmap into straight BGRA, which is what PDFium expects for an image object.</summary>
+    private static PdfImageData ToImageData(Bitmap bitmap)
+    {
+        var size = bitmap.PixelSize;
+        using var target = new WriteableBitmap(size, new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
+        var pixels = new byte[size.Width * size.Height * 4];
+
+        using (var frame = target.Lock())
+        {
+            bitmap.CopyPixels(frame);
+            var rowBytes = size.Width * 4;
+            for (int y = 0; y < size.Height; y++)
+                Marshal.Copy(frame.Address + y * frame.RowBytes, pixels, y * rowBytes, rowBytes);
+        }
+
+        for (int i = 0; i < pixels.Length; i += 4)
+        {
+            var alpha = pixels[i + 3];
+            if (alpha is 0 or 255)
+                continue;
+
+            pixels[i] = (byte)Math.Min(255, pixels[i] * 255 / alpha);
+            pixels[i + 1] = (byte)Math.Min(255, pixels[i + 1] * 255 / alpha);
+            pixels[i + 2] = (byte)Math.Min(255, pixels[i + 2] * 255 / alpha);
+        }
+
+        return new PdfImageData(size.Width, size.Height, pixels);
     }
 
     private void OnScrollToPageRequested(int index) => ScrollToPage(index, 0);

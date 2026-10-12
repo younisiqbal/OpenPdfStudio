@@ -28,8 +28,25 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsHomeActive), nameof(HasActiveDocument))]
     [NotifyCanExecuteChangedFor(nameof(ZoomInCommand), nameof(ZoomOutCommand), nameof(FitWidthCommand),
         nameof(FitPageCommand), nameof(CloseActiveTabCommand), nameof(CopySelectionCommand),
-        nameof(FindCommand), nameof(FindNextCommand), nameof(FindPreviousCommand), nameof(ToggleRulerCommand))]
+        nameof(FindCommand), nameof(FindNextCommand), nameof(FindPreviousCommand), nameof(ToggleRulerCommand),
+        nameof(ActualSizeCommand), nameof(RotateClockwiseCommand), nameof(PasteCommand), nameof(PasteInPlaceCommand),
+        nameof(SaveCommand), nameof(SaveAsCommand), nameof(PrintCommand), nameof(ToggleReadModeCommand),
+        nameof(ToggleFullScreenCommand))]
     private DocumentViewModel? _activeDocument;
+
+    /// <summary>Read Mode: the document fills the window with menus, tabs, rail and status bar hidden.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible))]
+    private bool _isReadMode;
+
+    /// <summary>Full Screen: like Read Mode, and the window covers the whole screen.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible))]
+    private bool _isFullScreen;
+
+    public bool IsPresenting => IsReadMode || IsFullScreen;
+    public bool IsChromeVisible => !IsPresenting;
+    public string PresentationExitText => IsFullScreen ? "Exit Full Screen (Esc)" : "Exit Read Mode (Esc)";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDarkTheme), nameof(IsLightTheme), nameof(IsSystemTheme),
@@ -59,6 +76,15 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Shows a blocking error message. Arguments: title, message.</summary>
     public Func<string, string, Task>? ShowErrorAsync { get; set; }
 
+    /// <summary>Asks where to save. Argument: the current path. Returns null on cancel.</summary>
+    public Func<string, Task<string?>>? PickSavePathAsync { get; set; }
+
+    /// <summary>Asks whether to save changes to a file before closing it. Argument: file name.</summary>
+    public Func<string, Task<SaveChangesChoice>>? ConfirmSaveChangesAsync { get; set; }
+
+    /// <summary>Shows the print dialog for a document and prints it.</summary>
+    public Func<DocumentViewModel, Task>? PrintDocumentAsync { get; set; }
+
     public MainViewModel()
     {
         Home = new HomeViewModel(s => Status = s, OpenPdfAsync, OpenPathAsync);
@@ -78,6 +104,165 @@ public partial class MainViewModel : ViewModelBase
 
         CurrentPage = (ViewModelBase?)newValue ?? Home;
         TopSearch.OnActiveDocumentChanged();
+        if (newValue is null)
+            ExitPresentation();
+    }
+
+    partial void OnIsReadModeChanged(bool value) => OnPresentationChanged();
+    partial void OnIsFullScreenChanged(bool value) => OnPresentationChanged();
+
+    private void OnPresentationChanged()
+    {
+        OnPropertyChanged(nameof(PresentationExitText));
+        foreach (var document in Documents)
+            document.IsPresenting = IsPresenting;
+    }
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private void ToggleReadMode()
+    {
+        if (IsFullScreen)
+        {
+            IsFullScreen = false;
+            IsReadMode = true;
+        }
+        else
+        {
+            IsReadMode = !IsReadMode;
+        }
+
+        Status = IsReadMode ? "Read Mode. Press Esc or Ctrl+H to exit." : "Read Mode off";
+    }
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private void ToggleFullScreen()
+    {
+        IsFullScreen = !IsFullScreen;
+        if (IsFullScreen)
+            IsReadMode = false;
+        Status = IsFullScreen ? "Full Screen. Press Esc or F11 to exit." : "Full Screen off";
+    }
+
+    [RelayCommand]
+    private void ExitPresentationMode() => ExitPresentation();
+
+    /// <summary>Leaves Read Mode or Full Screen. Returns false when neither was on.</summary>
+    public bool ExitPresentation()
+    {
+        if (!IsPresenting)
+            return false;
+
+        IsReadMode = false;
+        IsFullScreen = false;
+        return true;
+    }
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private Task Print() =>
+        ActiveDocument is { } document && PrintDocumentAsync is not null
+            ? PrintDocumentAsync(document)
+            : Task.CompletedTask;
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private void ActualSize() => ActiveDocument?.ActualSizeCommand.Execute(null);
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private void RotateClockwise() => ActiveDocument?.RotateClockwiseCommand.Execute(null);
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private Task Paste() => ActiveDocument?.PasteCommand.ExecuteAsync(null) ?? Task.CompletedTask;
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private Task PasteInPlace() => ActiveDocument?.PasteInPlaceCommand.ExecuteAsync(null) ?? Task.CompletedTask;
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private async Task Save()
+    {
+        if (ActiveDocument is not { } document)
+            return;
+
+        if (!document.IsModified)
+        {
+            Status = "No changes to save";
+            return;
+        }
+
+        await SaveDocumentAsync(document, saveAs: false);
+    }
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private async Task SaveAs()
+    {
+        if (ActiveDocument is { } document)
+            await SaveDocumentAsync(document, saveAs: true);
+    }
+
+    private async Task<bool> SaveDocumentAsync(DocumentViewModel document, bool saveAs)
+    {
+        var path = document.FilePath;
+        if (saveAs)
+        {
+            if (PickSavePathAsync is null)
+                return false;
+
+            var picked = await PickSavePathAsync(document.FilePath);
+            if (string.IsNullOrEmpty(picked))
+            {
+                Status = "Save cancelled";
+                return false;
+            }
+
+            path = Path.GetFullPath(picked);
+            var openElsewhere = Documents.Any(d => d != document &&
+                string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase));
+            if (openElsewhere)
+            {
+                await ShowError("Could not save", $"\"{Path.GetFileName(path)}\" is open in another tab. Close it first, or pick a different name.");
+                return false;
+            }
+        }
+
+        try
+        {
+            Status = $"Saving {Path.GetFileName(path)}...";
+            await document.SaveToAsync(path);
+            Home.AddOpenedFile(document.FilePath);
+            Status = $"Saved {document.FileName}";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Status = $"Could not save {Path.GetFileName(path)}";
+            await ShowError("Could not save", $"{Path.GetFileName(path)}\n\n{ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>Asks about unsaved changes. Returns false when the user cancels or the save fails.</summary>
+    private async Task<bool> ConfirmDiscardOrSaveAsync(DocumentViewModel document)
+    {
+        if (!document.IsModified || ConfirmSaveChangesAsync is null)
+            return true;
+
+        ActivateDocument(document);
+        return await ConfirmSaveChangesAsync(document.FileName) switch
+        {
+            SaveChangesChoice.Save => await SaveDocumentAsync(document, saveAs: false),
+            SaveChangesChoice.DontSave => true,
+            _ => false
+        };
+    }
+
+    /// <summary>Called before the window closes. Returns false to keep it open.</summary>
+    public async Task<bool> ConfirmCloseAllAsync()
+    {
+        foreach (var document in Documents.Where(d => d.IsModified).ToList())
+        {
+            if (!await ConfirmDiscardOrSaveAsync(document))
+                return false;
+        }
+
+        return true;
     }
 
     [RelayCommand]
@@ -90,10 +275,16 @@ public partial class MainViewModel : ViewModelBase
     private void Exit() => RequestClose?.Invoke();
 
     [RelayCommand(CanExecute = nameof(HasActiveDocument))]
-    private void CloseActiveTab()
+    private async Task CloseActiveTab()
     {
         if (ActiveDocument is not null)
-            CloseDocument(ActiveDocument);
+            await RequestCloseDocumentAsync(ActiveDocument);
+    }
+
+    private async Task RequestCloseDocumentAsync(DocumentViewModel document)
+    {
+        if (await ConfirmDiscardOrSaveAsync(document))
+            CloseDocument(document);
     }
 
     [RelayCommand(CanExecute = nameof(HasActiveDocument))]
@@ -189,8 +380,11 @@ public partial class MainViewModel : ViewModelBase
             try
             {
                 var session = await PdfDocumentSession.OpenAsync(fullPath, password);
-                var document = new DocumentViewModel(session, s => Status = s, ActivateDocument, CloseDocument);
+                var document = new DocumentViewModel(session, s => Status = s, ActivateDocument,
+                    d => _ = RequestCloseDocumentAsync(d));
                 document.Search.OpenAdvancedSearch = options => AdvancedSearch.Open(options);
+                document.Shell = new DocumentShellCommands(ToggleReadModeCommand, ToggleFullScreenCommand, PrintCommand);
+                document.IsPresenting = IsPresenting;
                 Documents.Add(document);
                 ActivateDocument(document);
                 Home.AddOpenedFile(fullPath);

@@ -38,6 +38,10 @@ public sealed class PdfDocumentSession : IDisposable
     private const int AnnotLink = 2;
     private const int AnnotPopup = 16;
     private const int AnnotWidget = 20;
+    private const int BitmapFormatBgra = 4;
+    private const string StandardFont = "Helvetica";
+    private const double TextAscent = 0.8;
+    public const double TextLineSpacing = 1.2;
 
     private readonly PdfiumWorker _worker;
     private readonly FpdfDocumentT _document;
@@ -59,7 +63,7 @@ public sealed class PdfDocumentSession : IDisposable
         FilePath = filePath;
     }
 
-    public string FilePath { get; }
+    public string FilePath { get; private set; }
     public int PageCount => _pageSizes.Length;
     public IReadOnlyList<Size> PageSizes => _pageSizes;
 
@@ -217,6 +221,118 @@ public sealed class PdfDocumentSession : IDisposable
             return new string(MemoryMarshal.Cast<ushort, char>(buffer.AsSpan(0, length)));
         });
 
+    /// <summary>Returns the font size of a character, or 0 when PDFium cannot tell.</summary>
+    public Task<double> GetFontSizeAsync(int pageIndex, int charIndex) =>
+        _worker.InvokeAsync(() =>
+        {
+            ThrowIfDisposed();
+            return fpdf_text.FPDFTextGetFontSize(GetTextPage(pageIndex).Text, charIndex);
+        });
+
+    /// <summary>Adds black Helvetica text to a page, one text object per line. <paramref name="topLeft"/> is in points.</summary>
+    public Task InsertTextAsync(int pageIndex, IReadOnlyList<string> lines, Point topLeft, double fontSize) =>
+        EditPageAsync(pageIndex, (page, map) =>
+        {
+            var lineHeight = fontSize * TextLineSpacing;
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (string.IsNullOrEmpty(lines[i]))
+                    continue;
+
+                var text = fpdf_edit.FPDFPageObjNewTextObj(_document, StandardFont, (float)fontSize);
+                if (text is null || text.__Instance == IntPtr.Zero)
+                    throw new InvalidOperationException("PDFium could not create a text object.");
+
+                var chars = new ushort[lines[i].Length + 1];
+                MemoryMarshal.Cast<char, ushort>(lines[i].AsSpan()).CopyTo(chars);
+                fpdf_edit.FPDFTextSetText(text, ref chars[0]);
+                fpdf_edit.FPDFPageObjSetFillColor(text, 0, 0, 0, 255);
+
+                var baseline = new Point(topLeft.X, topLeft.Y + fontSize * TextAscent + i * lineHeight);
+                map.Apply(text, baseline, new Vector(1, 0), new Vector(0, -1));
+                fpdf_edit.FPDFPageInsertObject(page, text);
+            }
+        });
+
+    /// <summary>Adds an image to a page, stretched to <paramref name="bounds"/> (in points).</summary>
+    public Task InsertImageAsync(int pageIndex, PdfImageData image, Rect bounds) =>
+        EditPageAsync(pageIndex, (page, map) =>
+        {
+            var handle = GCHandle.Alloc(image.Bgra, GCHandleType.Pinned);
+            try
+            {
+                var bitmap = fpdfview.FPDFBitmapCreateEx(image.Width, image.Height, BitmapFormatBgra,
+                    handle.AddrOfPinnedObject(), image.Width * 4);
+                if (PdfHandles.IsNull(bitmap))
+                    throw new InvalidOperationException("PDFium could not allocate the image.");
+
+                try
+                {
+                    var picture = fpdf_edit.FPDFPageObjNewImageObj(_document);
+                    if (picture is null || picture.__Instance == IntPtr.Zero)
+                        throw new InvalidOperationException("PDFium could not create an image object.");
+
+                    if (fpdf_edit.FPDFImageObjSetBitmap(null, 0, picture, bitmap) == 0)
+                    {
+                        fpdf_edit.FPDFPageObjDestroy(picture);
+                        throw new InvalidOperationException("PDFium could not store the image.");
+                    }
+
+                    map.Apply(picture, bounds.BottomLeft, new Vector(bounds.Width, 0), new Vector(0, -bounds.Height));
+                    fpdf_edit.FPDFPageInsertObject(page, picture);
+                }
+                finally
+                {
+                    fpdfview.FPDFBitmapDestroy(bitmap);
+                }
+            }
+            finally
+            {
+                handle.Free();
+            }
+        });
+
+    /// <summary>
+    /// Writes the document, with any edits, to <paramref name="path"/>. The file is written next to the target
+    /// first and then moved over it, so a failed save never leaves a half-written PDF.
+    /// </summary>
+    public Task SaveAsync(string path) => SaveCoreAsync(path, adoptPath: true);
+
+    /// <summary>Writes the document, with edits, to another file without making it this session's file.</summary>
+    public Task SaveCopyAsync(string path) => SaveCoreAsync(path, adoptPath: false);
+
+    private Task SaveCoreAsync(string path, bool adoptPath) =>
+        _worker.InvokeAsync(() =>
+        {
+            ThrowIfDisposed();
+            var fullPath = Path.GetFullPath(path);
+            var temp = Path.Combine(Path.GetDirectoryName(fullPath)!, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+
+            try
+            {
+                using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write))
+                    PdfSaver.Save(_document, stream);
+
+                File.Move(temp, fullPath, overwrite: true);
+            }
+            catch
+            {
+                try { File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+                throw;
+            }
+
+            if (adoptPath)
+                FilePath = fullPath;
+        });
+
+    /// <summary>Renders a page into a BGRA buffer for printing. Form fields and annotations are included.</summary>
+    public Task<byte[]> RenderForPrintAsync(int pageIndex, int pixelWidth, int pixelHeight, CancellationToken cancellationToken) =>
+        _worker.InvokeAsync(() =>
+        {
+            ThrowIfDisposed();
+            return PdfPageRenderer.RenderToBuffer(_document, pageIndex, pixelWidth, pixelHeight, forPrinting: true);
+        }, cancellationToken);
+
     public void Dispose()
     {
         if (_disposed)
@@ -226,31 +342,57 @@ public sealed class PdfDocumentSession : IDisposable
         _ = _worker.InvokeAsync(CloseOnWorker);
     }
 
+    private Task EditPageAsync(int pageIndex, Action<FpdfPageT, PageSpaceMap> edit) =>
+        _worker.InvokeAsync(() =>
+        {
+            ThrowIfDisposed();
+            if (pageIndex < 0 || pageIndex >= _pageSizes.Length)
+                throw new ArgumentOutOfRangeException(nameof(pageIndex));
+
+            // A cached text page holds its own copy of the page and would not see the new content.
+            ForgetPage(pageIndex);
+
+            var page = fpdfview.FPDF_LoadPage(_document, pageIndex);
+            if (PdfHandles.IsNull(page))
+                throw new InvalidOperationException($"Page {pageIndex + 1} could not be loaded.");
+
+            try
+            {
+                edit(page, PageSpaceMap.For(page, _pageSizes[pageIndex]));
+                if (fpdf_edit.FPDFPageGenerateContent(page) == 0)
+                    throw new InvalidOperationException("PDFium could not update the page content.");
+            }
+            finally
+            {
+                fpdfview.FPDF_ClosePage(page);
+            }
+        });
+
+    private void ForgetPage(int pageIndex)
+    {
+        _pageTexts.Remove(pageIndex);
+        if (!_textPages.Remove(pageIndex, out var text))
+            return;
+
+        _textPageOrder.Remove(pageIndex);
+        CloseTextPage(text);
+    }
+
     private static PdfDocumentSession OpenOnWorker(PdfiumWorker worker, string filePath, string? password)
     {
         if (!File.Exists(filePath))
             throw new PdfOpenException(PdfOpenError.FileNotFound, "The file could not be found.");
 
-        var buffer = IntPtr.Zero;
-        FpdfDocumentT? document;
-
-        if (IsAscii(filePath))
-        {
-            document = fpdfview.FPDF_LoadDocument(filePath, password);
-        }
-        else
-        {
-            var bytes = File.ReadAllBytes(filePath);
-            buffer = Marshal.AllocHGlobal(bytes.Length);
-            Marshal.Copy(bytes, 0, buffer, bytes.Length);
-            document = fpdfview.FPDF_LoadMemDocument64(buffer, (ulong)bytes.Length, password);
-        }
+        // Loaded from memory so the file is not held open; Save can then replace it.
+        var bytes = File.ReadAllBytes(filePath);
+        var buffer = Marshal.AllocHGlobal(bytes.Length);
+        Marshal.Copy(bytes, 0, buffer, bytes.Length);
+        var document = fpdfview.FPDF_LoadMemDocument64(buffer, (ulong)bytes.Length, password);
 
         if (PdfHandles.IsNull(document))
         {
             var error = fpdfview.FPDF_GetLastError();
-            if (buffer != IntPtr.Zero)
-                Marshal.FreeHGlobal(buffer);
+            Marshal.FreeHGlobal(buffer);
 
             throw error switch
             {
@@ -489,14 +631,41 @@ public sealed class PdfDocumentSession : IDisposable
             throw new ObjectDisposedException(nameof(PdfDocumentSession));
     }
 
-    private static bool IsAscii(string value)
+    /// <summary>
+    /// Maps the view's top-left point space onto PDF user space for one page. Built from PDFium's own
+    /// device-to-page conversion, so /Rotate and offset media boxes are handled.
+    /// </summary>
+    private readonly record struct PageSpaceMap(Vector Origin, Vector PerPointX, Vector PerPointY)
     {
-        foreach (var c in value)
+        public static PageSpaceMap For(FpdfPageT page, Size sizeInPoints)
         {
-            if (c > 127)
-                return false;
+            var width = (int)Math.Round(sizeInPoints.Width * DeviceScale);
+            var height = (int)Math.Round(sizeInPoints.Height * DeviceScale);
+            var topLeft = ToPage(page, width, height, 0, 0);
+            var topRight = ToPage(page, width, height, width, 0);
+            var bottomLeft = ToPage(page, width, height, 0, height);
+            return new PageSpaceMap(topLeft,
+                (topRight - topLeft) / sizeInPoints.Width,
+                (bottomLeft - topLeft) / sizeInPoints.Height);
         }
 
-        return true;
+        /// <summary>Places an object: its unit X and Y axes land on the given vectors, its origin on the given point.</summary>
+        public void Apply(FpdfPageobjectT obj, Point origin, Vector xAxis, Vector yAxis)
+        {
+            var at = Origin + PerPointX * origin.X + PerPointY * origin.Y;
+            var x = PerPointX * xAxis.X + PerPointY * xAxis.Y;
+            var y = PerPointX * yAxis.X + PerPointY * yAxis.Y;
+            fpdf_edit.FPDFPageObjTransform(obj, x.X, x.Y, y.X, y.Y, at.X, at.Y);
+        }
+
+        private static Vector ToPage(FpdfPageT page, int width, int height, int deviceX, int deviceY)
+        {
+            double x = 0, y = 0;
+            fpdfview.FPDF_DeviceToPage(page, 0, 0, width, height, 0, deviceX, deviceY, ref x, ref y);
+            return new Vector(x, y);
+        }
     }
 }
+
+/// <summary>Straight (not premultiplied) BGRA pixels, rows packed with no padding.</summary>
+public sealed record PdfImageData(int Width, int Height, byte[] Bgra);

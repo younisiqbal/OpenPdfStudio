@@ -29,11 +29,11 @@
   </UserControl.Styles>
 
   <DockPanel>
-    <views:ViewerBottomBar DockPanel.Dock="Bottom" />
+    <views:ViewerBottomBar DockPanel.Dock="Bottom" IsVisible="{Binding ShowBottomBar}" />
 
     <Border DockPanel.Dock="Left"
             Width="152"
-            IsVisible="{Binding IsThumbnailsVisible}"
+            IsVisible="{Binding ShowThumbnails}"
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,1,0">
@@ -113,6 +113,72 @@
                     HorizontalScrollBarVisibility="Auto"
                     VerticalScrollBarVisibility="Auto"
                     Background="{DynamicResource SystemChromeMediumColor}">
+        <ScrollViewer.ContextMenu>
+          <ContextMenu x:Name="PageContextMenu">
+            <MenuItem Header="Paste" InputGesture="Ctrl+V" Command="{Binding PasteCommand}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource ClipboardIcon}" Width="14" Height="14" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Paste in Place" InputGesture="Ctrl+Alt+V" Command="{Binding PasteInPlaceCommand}" />
+            <Separator />
+            <MenuItem Header="Read Mode" InputGesture="Ctrl+H" Command="{Binding Shell.ReadMode, FallbackValue={x:Null}}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource ReadModeIcon}" Width="14" Height="14" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Full Screen" InputGesture="F11" Command="{Binding Shell.FullScreen, FallbackValue={x:Null}}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource FullscreenIcon}" Width="14" Height="14" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="Zoom In" InputGesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource PlusIcon}" Width="12" Height="12" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Zoom Out" InputGesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource MinusIcon}" Width="12" Height="12" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="Actual Size" InputGesture="Ctrl+1" Command="{Binding ActualSizeCommand}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsActualSize}" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Fit Page" InputGesture="Ctrl+0" Command="{Binding FitPageCommand}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsFitPage}" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Fit Width" InputGesture="Ctrl+2" Command="{Binding FitWidthCommand}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsFitWidth}" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="Rotate Right" InputGesture="Ctrl+Shift+OemPlus" Command="{Binding RotateClockwiseCommand}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource RotatePageIcon}" Width="14" Height="14" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="Print..." InputGesture="Ctrl+P" Command="{Binding Shell.Print, FallbackValue={x:Null}}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource PrintIcon}" Width="14" Height="14" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="Rulers" InputGesture="Ctrl+R" Command="{Binding ToggleRulerCommand}">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsRulerVisible}" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </ContextMenu>
+        </ScrollViewer.ContextMenu>
         <ItemsControl x:Name="PagesHost"
                       ItemsSource="{Binding Pages}"
                       Margin="24"

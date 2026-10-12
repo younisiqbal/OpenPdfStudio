@@ -54,8 +54,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         _activate = activate;
         _close = close;
 
-        FilePath = session.FilePath;
-        FileName = Path.GetFileName(session.FilePath);
+        _filePath = session.FilePath;
         Pages = new ObservableCollection<PdfPageViewModel>(
             session.PageSizes.Select((size, index) => new PdfPageViewModel(index, size)));
 
@@ -75,8 +74,14 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         _pageInput = Pages.Count > 0 ? "1" : "0";
     }
 
-    public string FilePath { get; }
-    public string FileName { get; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FileName))]
+    private string _filePath;
+
+    /// <summary>True when there are pasted changes that have not been saved.</summary>
+    [ObservableProperty] private bool _isModified;
+
+    public string FileName => Path.GetFileName(FilePath);
     public ObservableCollection<PdfPageViewModel> Pages { get; }
     public DocumentSearchViewModel Search { get; }
     public PdfDocumentSession Session => _session;
@@ -87,6 +92,13 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     public Vector SavedScrollOffset { get; set; }
 
     public Func<string, Task>? SetClipboardTextAsync { get; set; }
+    public Func<Task<ClipboardContent?>>? ReadClipboardAsync { get; set; }
+
+    /// <summary>Where a plain Paste should land: the right-clicked point, else the pointer, else null for page centre.</summary>
+    public Func<(int PageIndex, Point Point)?>? GetPasteAnchor { get; set; }
+
+    /// <summary>Window-level commands (Read Mode, Full Screen, Print) for the page context menu.</summary>
+    public DocumentShellCommands? Shell { get; set; }
 
     /// <summary>Raised when the view should scroll so the page at this index is at the top.</summary>
     public event Action<int>? ScrollToPageRequested;
@@ -114,7 +126,17 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     [NotifyCanExecuteChangedFor(nameof(CopySelectionCommand))]
     private bool _hasSelection;
 
-    [ObservableProperty] private bool _isThumbnailsVisible = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowThumbnails))]
+    private bool _isThumbnailsVisible = true;
+
+    /// <summary>True in Read Mode and Full Screen; the thumbnails and bottom bar are hidden.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowThumbnails), nameof(ShowBottomBar))]
+    private bool _isPresenting;
+
+    public bool ShowThumbnails => IsThumbnailsVisible && !IsPresenting;
+    public bool ShowBottomBar => !IsPresenting;
 
     /// <summary>View rotation in degrees clockwise (0, 90, 180, 270). The file itself is not changed.</summary>
     [ObservableProperty] private int _rotation;
@@ -215,6 +237,8 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
 
         ApplyZoomToPages();
         OnPropertyChanged(nameof(ZoomText));
+        if (!_settingZoomMode)
+            SetZoomMode(Math.Abs(value - 100) < 0.01 ? ZoomMode.ActualSize : ZoomMode.Custom);
 
         _zoomCts.Cancel();
         _zoomCts = new CancellationTokenSource();
@@ -252,7 +276,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     {
         var fit = FitWidthPercent();
         if (fit > 0)
-            ZoomPercent = fit;
+            SetZoomWithMode(fit, ZoomMode.FitWidth);
     }
 
     [RelayCommand]
@@ -264,11 +288,46 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         var page = Pages[CurrentPageIndex];
         var heightPoints = IsSideways ? page.WidthPoints : page.HeightPoints;
         var byHeight = (ViewportSize.Height - ViewerPadding * 2) / (heightPoints * PdfPageViewModel.PointsToDip) * 100;
-        ZoomPercent = Math.Min(FitWidthPercent(), byHeight);
+        SetZoomWithMode(Math.Min(FitWidthPercent(), byHeight), ZoomMode.FitPage);
     }
 
     [RelayCommand]
-    private void ActualSize() => ZoomPercent = 100;
+    private void ActualSize() => SetZoomWithMode(100, ZoomMode.ActualSize);
+
+    private enum ZoomMode { Custom, ActualSize, FitPage, FitWidth }
+
+    private ZoomMode _zoomMode = ZoomMode.Custom;
+    private bool _settingZoomMode;
+
+    public bool IsActualSize => _zoomMode == ZoomMode.ActualSize;
+    public bool IsFitPage => _zoomMode == ZoomMode.FitPage;
+    public bool IsFitWidth => _zoomMode == ZoomMode.FitWidth;
+
+    private void SetZoomWithMode(double percent, ZoomMode mode)
+    {
+        _settingZoomMode = true;
+        try
+        {
+            ZoomPercent = percent;
+        }
+        finally
+        {
+            _settingZoomMode = false;
+        }
+
+        SetZoomMode(mode);
+    }
+
+    private void SetZoomMode(ZoomMode mode)
+    {
+        if (_zoomMode == mode)
+            return;
+
+        _zoomMode = mode;
+        OnPropertyChanged(nameof(IsActualSize));
+        OnPropertyChanged(nameof(IsFitPage));
+        OnPropertyChanged(nameof(IsFitWidth));
+    }
 
     public void ZoomByWheel(bool zoomIn) => ZoomPercent = zoomIn ? ZoomPercent * 1.1 : ZoomPercent / 1.1;
 
@@ -281,7 +340,10 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         _initialZoomApplied = true;
         var fit = FitWidthPercent();
         if (fit > 0)
-            ZoomPercent = Math.Clamp(fit, MinZoom, 125);
+        {
+            var clamped = Math.Clamp(fit, MinZoom, 125);
+            SetZoomWithMode(clamped, clamped.Equals(fit) ? ZoomMode.FitWidth : ZoomMode.Custom);
+        }
     }
 
     private double FitWidthPercent()
@@ -480,9 +542,9 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public async void RequestThumbnail(PdfPageViewModel page)
+    public async void RequestThumbnail(PdfPageViewModel page, bool refresh = false)
     {
-        if (_disposed || page.Thumbnail is not null || page.ThumbnailCts is not null)
+        if (_disposed || (page.Thumbnail is not null && !refresh) || page.ThumbnailCts is not null)
             return;
 
         var cts = new CancellationTokenSource();
@@ -498,7 +560,11 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
                 return;
             }
 
+            var previous = page.Thumbnail;
             page.Thumbnail = bitmap;
+            page.ThumbnailCts = null;
+            if (!ReferenceEquals(previous, bitmap))
+                previous?.Dispose();
         }
         catch (Exception)
         {
@@ -658,11 +724,155 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
             var text = await _session.GetTextAsync(range.PageIndex, range.Start, range.Count);
             await SetClipboardTextAsync(text);
             _setStatus($"Copied {text.Length} characters");
+            await RememberCopySourceAsync(range, text);
         }
         catch (Exception)
         {
             _setStatus("Could not copy the selected text");
         }
+    }
+
+    private async Task RememberCopySourceAsync(TextSelectionRange range, string text)
+    {
+        if (Pages[range.PageIndex].SelectionRects is not { Count: > 0 } rects)
+            return;
+
+        var bounds = rects.Aggregate((a, b) => a.Union(b));
+        var lineCount = Math.Max(1, NormalizeLines(text).Length);
+        var fontSize = await _session.GetFontSizeAsync(range.PageIndex, range.Start);
+        if (fontSize <= 0)
+            fontSize = bounds.Height / lineCount / PdfDocumentSession.TextLineSpacing;
+
+        s_lastCopy = new CopySource(text, bounds.TopLeft, Math.Clamp(fontSize, MinPasteFontSize, MaxPasteFontSize));
+    }
+
+    #endregion
+
+    #region Paste and save
+
+    private const double DefaultPasteFontSize = 12;
+    private const double MinPasteFontSize = 4;
+    private const double MaxPasteFontSize = 72;
+    private const double ImagePointsPerPixel = 72.0 / 96.0;
+    private const double MaxImagePageFraction = 0.9;
+    private const double AverageGlyphWidth = 0.5;
+
+    /// <summary>Where the last copied text came from, so Paste in Place can put it back at the same spot.</summary>
+    private sealed record CopySource(string Text, Point TopLeft, double FontSize);
+
+    private static CopySource? s_lastCopy;
+
+    [RelayCommand]
+    private Task Paste() => PasteAsync(inPlace: false);
+
+    [RelayCommand]
+    private Task PasteInPlace() => PasteAsync(inPlace: true);
+
+    private async Task PasteAsync(bool inPlace)
+    {
+        if (ReadClipboardAsync is null || Pages.Count == 0 || _disposed)
+            return;
+
+        var anchor = inPlace ? null : GetPasteAnchor?.Invoke();
+        ClipboardContent? content;
+        try
+        {
+            content = await ReadClipboardAsync();
+        }
+        catch (Exception)
+        {
+            content = null;
+        }
+
+        if (content is null || (content.Image is null && string.IsNullOrWhiteSpace(content.Text)))
+        {
+            _setStatus("Nothing to paste: the clipboard has no text or image");
+            return;
+        }
+
+        var pageIndex = anchor?.PageIndex ?? CurrentPageIndex;
+        var page = Pages[pageIndex];
+        var pageSize = new Size(page.WidthPoints, page.HeightPoints);
+
+        try
+        {
+            if (content.Image is { } image)
+            {
+                await _session.InsertImageAsync(pageIndex, image, PlaceImage(image, pageSize, anchor?.Point));
+                _setStatus($"Pasted an image on page {pageIndex + 1}");
+            }
+            else
+            {
+                var lines = NormalizeLines(content.Text!);
+                var source = inPlace && s_lastCopy is { } copy && NormalizeLines(copy.Text).SequenceEqual(lines) ? copy : null;
+                var fontSize = source?.FontSize ?? DefaultPasteFontSize;
+                var topLeft = source?.TopLeft ?? PlaceText(lines, fontSize, pageSize, anchor?.Point);
+                await _session.InsertTextAsync(pageIndex, lines, topLeft, fontSize);
+                _setStatus(inPlace && source is null
+                    ? $"Pasted on page {pageIndex + 1}. The original position is unknown, so it was centred."
+                    : $"Pasted text on page {pageIndex + 1}");
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+        catch (Exception)
+        {
+            _setStatus($"Could not paste onto page {pageIndex + 1}");
+            return;
+        }
+
+        IsModified = true;
+        RefreshPage(page);
+    }
+
+    private static string[] NormalizeLines(string text)
+    {
+        var lines = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var count = lines.Length;
+        while (count > 1 && string.IsNullOrWhiteSpace(lines[count - 1]))
+            count--;
+        return lines[..count];
+    }
+
+    private static Point PlaceText(string[] lines, double fontSize, Size page, Point? anchor)
+    {
+        var width = lines.Max(l => l.Length) * fontSize * AverageGlyphWidth;
+        var height = lines.Length * fontSize * PdfDocumentSession.TextLineSpacing;
+        var topLeft = anchor ?? new Point((page.Width - width) / 2, (page.Height - height) / 2);
+        return ClampInside(topLeft, new Size(width, height), page);
+    }
+
+    private static Rect PlaceImage(PdfImageData image, Size page, Point? anchor)
+    {
+        var width = image.Width * ImagePointsPerPixel;
+        var height = image.Height * ImagePointsPerPixel;
+        var shrink = Math.Min(1, Math.Min(page.Width * MaxImagePageFraction / width, page.Height * MaxImagePageFraction / height));
+        var size = new Size(width * shrink, height * shrink);
+        var topLeft = anchor ?? new Point((page.Width - size.Width) / 2, (page.Height - size.Height) / 2);
+        return new Rect(ClampInside(topLeft, size, page), size);
+    }
+
+    private static Point ClampInside(Point topLeft, Size size, Size page) => new(
+        Math.Clamp(topLeft.X, 0, Math.Max(0, page.Width - size.Width)),
+        Math.Clamp(topLeft.Y, 0, Math.Max(0, page.Height - size.Height)));
+
+    private void RefreshPage(PdfPageViewModel page)
+    {
+        page.Invalidate();
+        if (_wantedPages.Contains(page.Index))
+            _ = RenderPageAsync(page, lowPriority: false);
+        RequestThumbnail(page, refresh: true);
+        Search.OnDocumentEdited();
+    }
+
+    /// <summary>Writes the document to <paramref name="path"/> and makes it this tab's file.</summary>
+    public async Task SaveToAsync(string path)
+    {
+        await _session.SaveAsync(path);
+        FilePath = _session.FilePath;
+        IsModified = false;
     }
 
     #endregion
