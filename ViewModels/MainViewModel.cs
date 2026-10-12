@@ -28,7 +28,7 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsHomeActive), nameof(HasActiveDocument))]
     [NotifyCanExecuteChangedFor(nameof(ZoomInCommand), nameof(ZoomOutCommand), nameof(FitWidthCommand),
         nameof(FitPageCommand), nameof(CloseActiveTabCommand), nameof(CopySelectionCommand),
-        nameof(FindCommand), nameof(FindNextCommand), nameof(FindPreviousCommand))]
+        nameof(FindCommand), nameof(FindNextCommand), nameof(FindPreviousCommand), nameof(ToggleRulerCommand))]
     private DocumentViewModel? _activeDocument;
 
     [ObservableProperty]
@@ -131,6 +131,9 @@ public partial class MainViewModel : ViewModelBase
 
     [RelayCommand(CanExecute = nameof(HasActiveDocument))]
     private void FindPrevious() => ActiveDocument?.Search.PreviousCommand.Execute(null);
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private void ToggleRuler() => ActiveDocument?.ToggleRulerCommand.Execute(null);
 
     [RelayCommand]
     private void OpenAdvancedSearch()

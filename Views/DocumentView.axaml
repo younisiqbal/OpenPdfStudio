@@ -67,7 +67,48 @@
       </ScrollViewer>
     </Border>
 
-    <Grid>
+    <Grid x:Name="PageArea" RowDefinitions="Auto,*" ColumnDefinitions="Auto,*">
+      <Grid.ContextMenu>
+        <ContextMenu>
+          <MenuItem Header="Inches" Command="{Binding SetRulerUnitCommand}" CommandParameter="Inches">
+            <MenuItem.Icon>
+              <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsRulerInches}" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <MenuItem Header="Centimeters" Command="{Binding SetRulerUnitCommand}" CommandParameter="Centimeters">
+            <MenuItem.Icon>
+              <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsRulerCentimeters}" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator />
+          <MenuItem Header="Hide ruler" InputGesture="Ctrl+R" Command="{Binding ToggleRulerCommand}" />
+        </ContextMenu>
+      </Grid.ContextMenu>
+
+      <Border x:Name="RulerCorner" Grid.Row="0" Grid.Column="0" Width="20" Height="20"
+              IsVisible="{Binding IsRulerVisible}"
+              Background="{DynamicResource SystemChromeLowColor}"
+              BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,1" />
+      <controls:RulerControl x:Name="TopRuler" Grid.Row="0" Grid.Column="1" Height="20"
+                             Orientation="Horizontal"
+                             IsVisible="{Binding IsRulerVisible}"
+                             Unit="{Binding RulerUnit}"
+                             Background="{DynamicResource SystemChromeLowColor}"
+                             PageBrush="{DynamicResource SystemRegionColor}"
+                             Foreground="{DynamicResource SystemBaseMediumHighColor}"
+                             BorderBrush="{DynamicResource HairlineBrush}"
+                             MarkerBrush="{DynamicResource AccentBrush}" />
+      <controls:RulerControl x:Name="LeftRuler" Grid.Row="1" Grid.Column="0" Width="20"
+                             Orientation="Vertical"
+                             IsVisible="{Binding IsRulerVisible}"
+                             Unit="{Binding RulerUnit}"
+                             Background="{DynamicResource SystemChromeLowColor}"
+                             PageBrush="{DynamicResource SystemRegionColor}"
+                             Foreground="{DynamicResource SystemBaseMediumHighColor}"
+                             BorderBrush="{DynamicResource HairlineBrush}"
+                             MarkerBrush="{DynamicResource AccentBrush}" />
+
+      <Grid Grid.Row="1" Grid.Column="1">
       <ScrollViewer x:Name="PageScroller"
                     HorizontalScrollBarVisibility="Auto"
                     VerticalScrollBarVisibility="Auto"
@@ -121,6 +162,7 @@
                      DataContext="{Binding Search}"
                      HorizontalAlignment="Right" VerticalAlignment="Top"
                      Margin="0,12,24,0" />
+      </Grid>
     </Grid>
   </DockPanel>
 </UserControl>

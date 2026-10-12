@@ -62,7 +62,11 @@ public partial class DocumentView : UserControl
         {
             ResetTextHover();
             StartPopupHide();
+            UpdateRulerPointer(null);
         };
+        PageScroller.AddHandler(PointerMovedEvent, (_, e) => UpdateRulerPointer(e.GetPosition(PageScroller)),
+            RoutingStrategies.Tunnel, handledEventsToo: true);
+        PageArea.AddHandler(ContextRequestedEvent, OnPageAreaContextRequested, RoutingStrategies.Tunnel);
 
         ThumbnailHost.ContainerPrepared += (_, e) =>
         {
@@ -157,6 +161,7 @@ public partial class DocumentView : UserControl
                 break;
             case nameof(DocumentViewModel.CurrentPageIndex) when _vm is not null:
                 ThumbnailHost.ScrollIntoView(_vm.CurrentPageIndex);
+                UpdateRulers();
                 break;
             case nameof(DocumentViewModel.Rotation) when _vm is not null:
                 HidePopup();
@@ -165,6 +170,9 @@ public partial class DocumentView : UserControl
                 break;
             case nameof(DocumentViewModel.HasSelection) when _vm is { HasSelection: false }:
                 HidePopup();
+                break;
+            case nameof(DocumentViewModel.IsRulerVisible):
+                Dispatcher.UIThread.Post(UpdateRulers, DispatcherPriority.Background);
                 break;
         }
     }
@@ -286,6 +294,55 @@ public partial class DocumentView : UserControl
         }
 
         _vm.SetVisiblePages(visible, current);
+        UpdateRulers();
+    }
+
+    private void UpdateRulers()
+    {
+        if (_vm is not { IsRulerVisible: true } vm)
+            return;
+
+        var index = vm.CurrentPageIndex;
+        if (index < 0 || index >= vm.Pages.Count ||
+            (PagesHost.ContainerFromIndex(index) as ContentPresenter)?.Child is not LayoutTransformControl page)
+            return;
+
+        var model = vm.Pages[index];
+        var pixelsPerPoint = model.WidthPoints > 0 ? model.DisplayWidth / model.WidthPoints : 1;
+
+        if (page.TranslatePoint(default, TopRuler) is { } top)
+        {
+            TopRuler.Origin = top.X;
+            TopRuler.PageLength = page.Bounds.Width;
+            TopRuler.PixelsPerPoint = pixelsPerPoint;
+        }
+
+        if (page.TranslatePoint(default, LeftRuler) is { } left)
+        {
+            LeftRuler.Origin = left.Y;
+            LeftRuler.PageLength = page.Bounds.Height;
+            LeftRuler.PixelsPerPoint = pixelsPerPoint;
+        }
+    }
+
+    private void UpdateRulerPointer(Point? positionInScroller)
+    {
+        if (positionInScroller is not { } position)
+        {
+            TopRuler.PointerPosition = null;
+            LeftRuler.PointerPosition = null;
+            return;
+        }
+
+        TopRuler.PointerPosition = PageScroller.TranslatePoint(position, TopRuler)?.X;
+        LeftRuler.PointerPosition = PageScroller.TranslatePoint(position, LeftRuler)?.Y;
+    }
+
+    private void OnPageAreaContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (e.Source is not Visual source ||
+            !(ReferenceEquals(source, TopRuler) || ReferenceEquals(source, LeftRuler) || ReferenceEquals(source, RulerCorner)))
+            e.Handled = true;
     }
 
     private void OnScrollToPageRequested(int index) => ScrollToPage(index, 0);

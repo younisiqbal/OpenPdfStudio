@@ -145,5 +145,13 @@
         </StackPanel>
       </StackPanel>
     </Button>
+
+    <Button Classes="nav" Classes.active="{Binding IsRulerVisible}"
+            Command="{Binding ToggleRulerCommand}" ToolTip.Tip="Show or hide the ruler (Ctrl+R)">
+      <StackPanel Spacing="2">
+        <PathIcon Data="{StaticResource RulerIcon}" />
+        <TextBlock Text="Ruler" HorizontalAlignment="Center" />
+      </StackPanel>
+    </Button>
   </StackPanel>
 </UserControl>

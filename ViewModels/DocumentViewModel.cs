@@ -174,12 +174,31 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
             UseHandTool();
     }
 
+    public bool IsRulerVisible => ViewerPreferences.ShowRuler;
+    public RulerUnit RulerUnit => ViewerPreferences.RulerUnit;
+    public bool IsRulerInches => RulerUnit == RulerUnit.Inches;
+    public bool IsRulerCentimeters => RulerUnit == RulerUnit.Centimeters;
+
+    [RelayCommand]
+    private void ToggleRuler() => ViewerPreferences.ShowRuler = !ViewerPreferences.ShowRuler;
+
+    [RelayCommand]
+    private void SetRulerUnit(string? unit)
+    {
+        if (Enum.TryParse(unit, out RulerUnit value))
+            ViewerPreferences.RulerUnit = value;
+    }
+
     private void OnViewerPreferencesChanged()
     {
         OnPropertyChanged(nameof(IsPalmAndFistCursor));
         OnPropertyChanged(nameof(IsPalmCursor));
         OnPropertyChanged(nameof(IsMoveArrowsCursor));
         OnPropertyChanged(nameof(IsPointingFingerCursor));
+        OnPropertyChanged(nameof(IsRulerVisible));
+        OnPropertyChanged(nameof(RulerUnit));
+        OnPropertyChanged(nameof(IsRulerInches));
+        OnPropertyChanged(nameof(IsRulerCentimeters));
     }
 
     [RelayCommand]
