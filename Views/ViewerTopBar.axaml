@@ -67,7 +67,7 @@
       <Button.Flyout>
         <MenuFlyout Placement="RightEdgeAlignedTop">
           <MenuItem Header="Select text" Command="{Binding UseSelectToolCommand}" />
-          <MenuItem Header="Select annotation" Command="{Binding ComingSoonCommand}" CommandParameter="Select annotation" />
+          <MenuItem Header="Select annotation" Command="{Binding UseSelectAnnotationToolCommand}" />
         </MenuFlyout>
       </Button.Flyout>
       <StackPanel Spacing="2">
@@ -91,7 +91,7 @@
       <Button.Flyout>
         <MenuFlyout Placement="RightEdgeAlignedTop">
           <MenuItem Header="Copy" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
-          <MenuItem Header="Paste" Command="{Binding ComingSoonCommand}" CommandParameter="Paste" />
+          <MenuItem Header="Paste" InputGesture="Ctrl+V" Command="{Binding PasteCommand}" />
         </MenuFlyout>
       </Button.Flyout>
       <StackPanel Spacing="2">

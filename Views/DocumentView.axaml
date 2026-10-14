@@ -30,6 +30,10 @@
 
   <DockPanel>
     <views:ViewerBottomBar DockPanel.Dock="Bottom" IsVisible="{Binding ShowBottomBar}" />
+    <views:CommentToolbar DockPanel.Dock="Top" IsVisible="{Binding ShowCommentChrome}" />
+    <Border DockPanel.Dock="Right" IsVisible="{Binding ShowFormatPanel}">
+      <views:FormatPanel DataContext="{Binding Format}" />
+    </Border>
 
     <Border DockPanel.Dock="Left"
             Width="152"
@@ -115,6 +119,11 @@
                     Background="{DynamicResource SystemChromeMediumColor}">
         <ScrollViewer.ContextMenu>
           <ContextMenu x:Name="PageContextMenu">
+            <MenuItem Header="Delete" InputGesture="Delete" Command="{Binding DeleteSelectedAnnotationsCommand}"
+                      IsVisible="{Binding HasSelectedAnnotation}" />
+            <MenuItem Header="Properties" Command="{Binding OpenFormatPanelCommand}"
+                      IsVisible="{Binding HasSelectedAnnotation}" />
+            <Separator IsVisible="{Binding HasSelectedAnnotation}" />
             <MenuItem Header="Paste" InputGesture="Ctrl+V" Command="{Binding PasteCommand}">
               <MenuItem.Icon>
                 <PathIcon Data="{StaticResource ClipboardIcon}" Width="14" Height="14" />
@@ -208,6 +217,10 @@
                                                Fill="#99FF8C00" />
                     <controls:SelectionOverlay Rects="{Binding SelectionRects}"
                                                PageWidthPoints="{Binding WidthPoints}" />
+                    <controls:AnnotationOverlay Annotations="{Binding Annotations}"
+                                                PageWidthPoints="{Binding WidthPoints}"
+                                                DraftRect="{Binding DraftRect}"
+                                                DraftCalloutTarget="{Binding DraftCalloutTarget}" />
                     <TextBlock Text="This page could not be rendered."
                                Foreground="#80000000"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -220,8 +233,10 @@
         </ItemsControl>
       </ScrollViewer>
 
-      <Canvas x:Name="PopupLayer" ClipToBounds="True">
+      <Canvas x:Name="PopupLayer" ClipToBounds="False">
         <views:SelectionPopup x:Name="SelectionPopupHost" IsVisible="False" />
+        <views:AnnotationEditor x:Name="AnnotationEditorHost" IsVisible="False" />
+        <views:NotePopup x:Name="NotePopupHost" IsVisible="False" />
       </Canvas>
 
       <views:FindBar x:Name="FindBarHost"

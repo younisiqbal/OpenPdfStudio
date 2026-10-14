@@ -1,0 +1,136 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             xmlns:models="using:OpenPdfStudio.Models"
+             xmlns:conv="using:OpenPdfStudio.Views.Converters"
+             x:Class="OpenPdfStudio.Views.FormatPanel"
+             x:DataType="vm:FormatPanelViewModel"
+             Width="260">
+  <UserControl.Resources>
+    <conv:ColorToBrushConverter x:Key="ColorBrush" />
+    <conv:SvgPathConverter x:Key="SvgPath" />
+  </UserControl.Resources>
+  <Border Background="{DynamicResource SystemChromeLowColor}"
+          BorderBrush="{DynamicResource HairlineBrush}"
+          BorderThickness="1,0,0,0">
+    <DockPanel>
+      <DockPanel DockPanel.Dock="Top" Margin="12,10,8,8">
+        <Button DockPanel.Dock="Right" Classes="icon" Command="{Binding CloseCommand}"
+                ToolTip.Tip="Close">
+          <PathIcon Data="{StaticResource CloseIcon}" Width="12" Height="12" />
+        </Button>
+        <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+      </DockPanel>
+
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="12,0,12,16" Spacing="12">
+          <Border Height="64" CornerRadius="4" Background="{Binding PreviewFill}"
+                  BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1">
+            <Panel>
+              <Path Data="{Binding PreviewIcon, Converter={StaticResource SvgPath}}" Stretch="Uniform" Margin="18"
+                    Fill="{Binding PreviewTextBrush}"
+                    Stroke="{Binding PreviewTextBrush}" StrokeThickness="1.2"
+                    IsVisible="{Binding ShowNoteStyle}" />
+              <TextBlock Text="{Binding PreviewText}"
+                         FontFamily="{Binding PreviewFontFamily}"
+                         FontSize="{Binding FontSize}"
+                         FontWeight="{Binding PreviewWeight}"
+                         FontStyle="{Binding PreviewStyle}"
+                         TextDecorations="{Binding PreviewDecorations}"
+                         Foreground="{Binding PreviewTextBrush}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                         IsVisible="{Binding !ShowNoteStyle}" />
+            </Panel>
+          </Border>
+
+          <StackPanel Spacing="6" IsVisible="{Binding ShowNoteStyle}">
+            <TextBlock Text="Note Style" FontWeight="SemiBold" FontSize="12" />
+            <UniformGrid x:Name="IconGrid" Columns="8" />
+            <UniformGrid x:Name="NoteColorGrid" Columns="8" />
+            <TextBlock Text="Opacity" FontSize="11" Opacity="0.75" />
+            <Slider Minimum="0" Maximum="1" Value="{Binding Opacity}" TickFrequency="0.05" />
+          </StackPanel>
+
+          <StackPanel Spacing="6" IsVisible="{Binding ShowTextStyle}">
+            <TextBlock Text="Text Style" FontWeight="SemiBold" FontSize="12" />
+            <ComboBox ItemsSource="{Binding Fonts}" SelectedItem="{Binding Font}" HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="models:AnnotationFont">
+                  <TextBlock Text="{Binding}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <DockPanel>
+              <ComboBox DockPanel.Dock="Right" Width="72" ItemsSource="{Binding Sizes}" SelectedItem="{Binding FontSize}" />
+              <UniformGrid x:Name="TextColorGrid" Columns="8" />
+            </DockPanel>
+            <StackPanel Orientation="Horizontal" Spacing="2">
+              <Button Classes="icon" Classes.active="{Binding Bold}" Command="{Binding ToggleBoldCommand}" ToolTip.Tip="Bold">
+                <TextBlock Text="B" FontWeight="Bold" />
+              </Button>
+              <Button Classes="icon" Classes.active="{Binding Italic}" Command="{Binding ToggleItalicCommand}" ToolTip.Tip="Italic">
+                <TextBlock Text="I" FontStyle="Italic" />
+              </Button>
+              <Button Classes="icon" Classes.active="{Binding Underline}" Command="{Binding ToggleUnderlineCommand}" ToolTip.Tip="Underline">
+                <TextBlock Text="U" TextDecorations="Underline" />
+              </Button>
+              <Button Classes="icon" Classes.active="{Binding Strikethrough}" Command="{Binding ToggleStrikethroughCommand}" ToolTip.Tip="Strikethrough">
+                <TextBlock Text="S" TextDecorations="Strikethrough" />
+              </Button>
+              <Border Width="1" Margin="4,2" Background="{DynamicResource HairlineBrush}" />
+              <Button Classes="icon" Classes.active="{Binding IsAlignLeft}" Command="{Binding SetAlignCommand}"
+                      CommandParameter="{x:Static models:AnnotationTextAlign.Left}" ToolTip.Tip="Align left">
+                <PathIcon Data="{StaticResource AlignLeftIcon}" />
+              </Button>
+              <Button Classes="icon" Classes.active="{Binding IsAlignCenter}" Command="{Binding SetAlignCommand}"
+                      CommandParameter="{x:Static models:AnnotationTextAlign.Center}" ToolTip.Tip="Align centre">
+                <PathIcon Data="{StaticResource AlignCenterIcon}" />
+              </Button>
+              <Button Classes="icon" Classes.active="{Binding IsAlignRight}" Command="{Binding SetAlignCommand}"
+                      CommandParameter="{x:Static models:AnnotationTextAlign.Right}" ToolTip.Tip="Align right">
+                <PathIcon Data="{StaticResource AlignRightIcon}" />
+              </Button>
+            </StackPanel>
+            <DockPanel>
+              <TextBlock Text="Line spacing" FontSize="11" Opacity="0.75" VerticalAlignment="Center" />
+              <ComboBox HorizontalAlignment="Right" Width="80" ItemsSource="{Binding Spacings}" SelectedItem="{Binding LineSpacing}" />
+            </DockPanel>
+          </StackPanel>
+
+          <StackPanel Spacing="6" IsVisible="{Binding ShowBorderFill}">
+            <TextBlock Text="Border and Fill" FontWeight="SemiBold" FontSize="12" />
+            <TextBlock Text="Border" FontSize="11" Opacity="0.75" />
+            <UniformGrid x:Name="BorderColorGrid" Columns="8" />
+            <ComboBox ItemsSource="{Binding Widths}" SelectedItem="{Binding BorderWidth}" HorizontalAlignment="Left" Width="80" />
+            <DockPanel>
+              <TextBlock Text="Fill" FontSize="11" Opacity="0.75" VerticalAlignment="Center" />
+              <Button DockPanel.Dock="Right" Classes="icon" Classes.active="{Binding HasFill}"
+                      Command="{Binding ToggleFillCommand}" Content="Fill" />
+            </DockPanel>
+            <UniformGrid x:Name="FillColorGrid" Columns="8" />
+          </StackPanel>
+
+          <StackPanel Spacing="6" IsVisible="{Binding ShowArrange}">
+            <TextBlock Text="Arrange" FontWeight="SemiBold" FontSize="12" />
+            <Button Classes="menuRow" Command="{Binding PageCenterCommand}" IsEnabled="{Binding CanPageCenter}"
+                    Content="Page Center" />
+            <TextBlock Text="Alignment" FontSize="11" Opacity="0.75" IsVisible="{Binding CanAlign}" />
+            <WrapPanel IsVisible="{Binding CanAlign}">
+              <Button Classes="icon" Command="{Binding AlignLeftCommand}" ToolTip.Tip="Align left" Content="L" />
+              <Button Classes="icon" Command="{Binding AlignCenterHCommand}" ToolTip.Tip="Align centre" Content="C" />
+              <Button Classes="icon" Command="{Binding AlignRightCommand}" ToolTip.Tip="Align right" Content="R" />
+              <Button Classes="icon" Command="{Binding AlignTopCommand}" ToolTip.Tip="Align top" Content="T" />
+              <Button Classes="icon" Command="{Binding AlignMiddleCommand}" ToolTip.Tip="Align middle" Content="M" />
+              <Button Classes="icon" Command="{Binding AlignBottomCommand}" ToolTip.Tip="Align bottom" Content="B" />
+            </WrapPanel>
+            <TextBlock Text="Distribute" FontSize="11" Opacity="0.75" IsVisible="{Binding CanDistribute}" />
+            <StackPanel Orientation="Horizontal" IsVisible="{Binding CanDistribute}">
+              <Button Classes="icon" Command="{Binding DistributeHCommand}" Content="H" ToolTip.Tip="Distribute horizontally" />
+              <Button Classes="icon" Command="{Binding DistributeVCommand}" Content="V" ToolTip.Tip="Distribute vertically" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</UserControl>

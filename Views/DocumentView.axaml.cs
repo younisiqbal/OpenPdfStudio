@@ -50,6 +50,20 @@ public partial class DocumentView : UserControl
     private bool _hasContextAnchor;
     private (PdfPageViewModel Page, Point PointInPoints)? _contextAnchor;
 
+    private bool _isBoxing;
+    private bool _waitingCalloutTarget;
+    private int _boxPageIndex = -1;
+    private Point _boxStart;
+    private Point _boxCurrent;
+
+    private bool _isMovingAnnotation;
+    private bool _isResizingAnnotation;
+    private AnnotationHandle _resizeHandle;
+    private AnnotationViewModel? _dragAnnotation;
+    private PdfAnnotation? _dragOriginal;
+    private Point _dragStartPoint;
+    private bool _moved;
+
     public DocumentView()
     {
         InitializeComponent();
@@ -95,6 +109,19 @@ public partial class DocumentView : UserControl
 
         FindBarHost.ReturnFocusRequested += () => Focus();
 
+        AnnotationEditorHost.Committed += (annotation, text) => _ = FinishEdit(annotation, text, cancel: false);
+        AnnotationEditorHost.Cancelled += annotation => _ = FinishEdit(annotation, null, cancel: true);
+        AnnotationEditorHost.TextChanged += () =>
+        {
+            if (_vm is null || AnnotationEditorHost.Annotation is not { } annotation)
+                return;
+            annotation.Model = annotation.Model with { Contents = AnnotationEditorHost.Text };
+            PositionTextEditor(annotation);
+        };
+        NotePopupHost.Committed += (annotation, text) => _ = FinishEdit(annotation, text, cancel: false);
+        NotePopupHost.Cancelled += annotation => _ = FinishEdit(annotation, null, cancel: true);
+        NotePopupHost.DeleteRequested += annotation => _ = DeleteFromPopup(annotation);
+
         DataContextChanged += OnDataContextChanged;
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
     }
@@ -114,6 +141,7 @@ public partial class DocumentView : UserControl
         ViewerPreferences.Changed -= UpdateCursor;
         ResetTextHover();
         HidePopup();
+        HideEditors();
         _vm?.OnViewDetached();
     }
 
@@ -127,6 +155,8 @@ public partial class DocumentView : UserControl
             _vm.SetClipboardTextAsync = null;
             _vm.ReadClipboardAsync = null;
             _vm.GetPasteAnchor = null;
+            _vm.TextEditRequested -= OnTextEditRequested;
+            _vm.NotePopupRequested -= OnNotePopupRequested;
             _vm.OnViewDetached();
         }
 
@@ -146,6 +176,8 @@ public partial class DocumentView : UserControl
         };
         _vm.ReadClipboardAsync = ReadClipboardAsync;
         _vm.GetPasteAnchor = GetPasteAnchor;
+        _vm.TextEditRequested += OnTextEditRequested;
+        _vm.NotePopupRequested += OnNotePopupRequested;
 
         if (TopLevel.GetTopLevel(this) is { } topLevel)
             _vm.RenderScaling = topLevel.RenderScaling;
@@ -170,8 +202,10 @@ public partial class DocumentView : UserControl
                 HidePopup();
                 break;
             case nameof(DocumentViewModel.Tool):
+            case nameof(DocumentViewModel.AnnotationTool):
                 ResetTextHover();
                 HidePopup();
+                UpdateCursor();
                 break;
             case nameof(DocumentViewModel.CurrentPageIndex) when _vm is not null:
                 ThumbnailHost.ScrollIntoView(_vm.CurrentPageIndex);
@@ -197,11 +231,17 @@ public partial class DocumentView : UserControl
             return;
 
         var style = ViewerPreferences.HandCursorStyle;
-        var cursor = _vm.IsSelectTool || _isSelecting || _overText
-            ? AppCursors.Ibeam
-            : _isPanning
-                ? AppCursors.GetDrag(style)
-                : AppCursors.GetHover(style);
+        Cursor cursor;
+        if (_vm.IsTypewriterTool || _vm.IsMarkupTool || _isSelecting)
+            cursor = AppCursors.Ibeam;
+        else if (_vm.HasAnnotationTool || _vm.IsSelectAnnotationTool || _isBoxing || _isMovingAnnotation || _isResizingAnnotation)
+            cursor = new Cursor(StandardCursorType.Cross);
+        else if (_vm.IsSelectTool || _overText)
+            cursor = AppCursors.Ibeam;
+        else if (_isPanning)
+            cursor = AppCursors.GetDrag(style);
+        else
+            cursor = AppCursors.GetHover(style);
 
         if (!ReferenceEquals(PageScroller.Cursor, cursor))
             PageScroller.Cursor = cursor;
@@ -270,6 +310,7 @@ public partial class DocumentView : UserControl
 
         _vm.SavedScrollOffset = PageScroller.Offset;
         UpdateVisiblePages();
+        PositionOpenEditors();
     }
 
     private void UpdateVisiblePages()
@@ -376,6 +417,9 @@ public partial class DocumentView : UserControl
         HidePopup();
         _contextAnchor = e.TryGetPosition(PageScroller, out var position) ? HitTestPage(position) : null;
         _hasContextAnchor = true;
+        if (_vm is not null && _contextAnchor is { } hit &&
+            _vm.HitTestAnnotation(hit.Page.Index, hit.PointInPoints) is { } annotation)
+            _vm.SelectAnnotation(annotation, add: false);
     }
 
     private void OnPageContextMenuClosed(object? sender, RoutedEventArgs e) =>
@@ -510,6 +554,69 @@ public partial class DocumentView : UserControl
         Focus();
         HidePopup();
         var position = e.GetPosition(PageScroller);
+        var hit = HitTestPage(position);
+        var add = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+
+        if (_waitingCalloutTarget && hit is { } calloutHit)
+        {
+            _waitingCalloutTarget = false;
+            var page = calloutHit.Page;
+            var box = NormalizeDraft(_boxStart, _boxCurrent);
+            page.DraftRect = null;
+            page.DraftCalloutTarget = null;
+            _ = _vm.AddAnnotationAsync(_vm.CreateTextbox(page.Index, box, AnnotationKind.Callout, calloutHit.PointInPoints), beginEdit: true);
+            e.Handled = true;
+            return;
+        }
+
+        if (_vm.HasAnnotationTool)
+        {
+            HandleAnnotationToolPress(e, position, hit);
+            return;
+        }
+
+        if (hit is { } pageHit)
+        {
+            var handleSize = AnnotationOverlay.HandleSize / Math.Max(0.01, pageHit.Page.DisplayWidth / pageHit.Page.WidthPoints);
+            foreach (var selected in _vm.SelectedAnnotations)
+            {
+                if (selected.PageIndex != pageHit.Page.Index)
+                    continue;
+                var handle = DocumentViewModel.HitHandle(selected.Model, pageHit.PointInPoints, handleSize);
+                if (handle != AnnotationHandle.None)
+                {
+                    BeginAnnotationDrag(selected, pageHit.PointInPoints, handle);
+                    e.Pointer.Capture(PageScroller);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            if (_vm.HitTestAnnotation(pageHit.Page.Index, pageHit.PointInPoints) is { } annotation)
+            {
+                if (e.ClickCount >= 2 && (annotation.Model.IsFreeText || annotation.Kind == AnnotationKind.Note))
+                {
+                    _ = _vm.BeginEditAsync(annotation);
+                    e.Handled = true;
+                    return;
+                }
+
+                _vm.SelectAnnotation(annotation, add);
+                BeginAnnotationDrag(annotation, pageHit.PointInPoints, AnnotationHandle.Move);
+                e.Pointer.Capture(PageScroller);
+                e.Handled = true;
+                return;
+            }
+        }
+
+        if (!add)
+            _vm.ClearAnnotationSelection();
+
+        if (_vm.IsSelectAnnotationTool)
+        {
+            e.Handled = true;
+            return;
+        }
 
         if (_vm.IsHandTool && !_overText)
         {
@@ -523,7 +630,6 @@ public partial class DocumentView : UserControl
             return;
         }
 
-        var hit = HitTestPage(position);
         if (hit is null)
         {
             _vm.ClearSelection();
@@ -535,6 +641,64 @@ public partial class DocumentView : UserControl
         _vm.BeginSelection(_selectionPageIndex, hit.Value.PointInPoints);
         e.Pointer.Capture(PageScroller);
         e.Handled = true;
+    }
+
+    private void HandleAnnotationToolPress(PointerPressedEventArgs e, Point position, (PdfPageViewModel Page, Point PointInPoints)? hit)
+    {
+        if (_vm is null || hit is null)
+            return;
+
+        var pageHit = hit.Value;
+        if (_vm.IsNoteTool)
+        {
+            _ = _vm.AddAnnotationAsync(_vm.CreateNote(pageHit.Page.Index, pageHit.PointInPoints), beginEdit: true);
+            e.Handled = true;
+            return;
+        }
+
+        if (_vm.IsTypewriterTool)
+        {
+            _ = _vm.AddAnnotationAsync(_vm.CreateTypewriter(pageHit.Page.Index, pageHit.PointInPoints), beginEdit: true);
+            e.Handled = true;
+            return;
+        }
+
+        if (_vm.IsTextboxTool || _vm.IsCalloutTool)
+        {
+            _isBoxing = true;
+            _boxPageIndex = pageHit.Page.Index;
+            _boxStart = _boxCurrent = pageHit.PointInPoints;
+            pageHit.Page.DraftRect = new Rect(_boxStart, new Size(1, 1));
+            e.Pointer.Capture(PageScroller);
+            e.Handled = true;
+            return;
+        }
+
+        if (_vm.IsMarkupTool)
+        {
+            _isSelecting = true;
+            _selectionPageIndex = pageHit.Page.Index;
+            _vm.BeginSelection(_selectionPageIndex, pageHit.PointInPoints);
+            e.Pointer.Capture(PageScroller);
+            e.Handled = true;
+        }
+    }
+
+    private void BeginAnnotationDrag(AnnotationViewModel annotation, Point point, AnnotationHandle handle)
+    {
+        _dragAnnotation = annotation;
+        _dragOriginal = annotation.Model;
+        _dragStartPoint = point;
+        _moved = false;
+        if (handle == AnnotationHandle.Move)
+            _isMovingAnnotation = true;
+        else
+        {
+            _isResizingAnnotation = true;
+            _resizeHandle = handle;
+        }
+
+        UpdateCursor();
     }
 
     private void OnPagePointerMoved(object? sender, PointerEventArgs e)
@@ -553,6 +717,32 @@ public partial class DocumentView : UserControl
             return;
         }
 
+        if (_isBoxing && _boxPageIndex >= 0)
+        {
+            if (ToPagePoint(_boxPageIndex, position, clamp: true) is { } point)
+            {
+                _boxCurrent = point;
+                var page = _vm.Pages[_boxPageIndex];
+                page.DraftRect = NormalizeDraft(_boxStart, _boxCurrent);
+                if (_waitingCalloutTarget || _vm.IsCalloutTool)
+                    page.DraftCalloutTarget = null;
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        if ((_isMovingAnnotation || _isResizingAnnotation) && _dragAnnotation is { } dragging && _dragOriginal is { } original
+            && ToPagePoint(dragging.PageIndex, position, clamp: true) is { } current)
+        {
+            _moved = true;
+            dragging.Model = _isMovingAnnotation
+                ? DocumentViewModel.Offset(original, current - _dragStartPoint)
+                : DocumentViewModel.Resize(original, _resizeHandle, _dragStartPoint, current);
+            e.Handled = true;
+            return;
+        }
+
         if (_isSelecting)
         {
             if (ToPagePoint(_selectionPageIndex, position, clamp: true) is { } point)
@@ -561,7 +751,7 @@ public partial class DocumentView : UserControl
             return;
         }
 
-        if (_vm.IsHandTool)
+        if (_vm.IsHandTool && !_vm.HasAnnotationTool)
             ProbeTextUnderPointer(position);
 
         UpdatePopupHover(position);
@@ -578,13 +768,55 @@ public partial class DocumentView : UserControl
             return;
         }
 
+        if (_isBoxing && _vm is not null && _boxPageIndex >= 0)
+        {
+            var page = _vm.Pages[_boxPageIndex];
+            var box = NormalizeDraft(_boxStart, _boxCurrent);
+            _isBoxing = false;
+            e.Pointer.Capture(null);
+            e.Handled = true;
+            if (_vm.IsCalloutTool)
+            {
+                _waitingCalloutTarget = true;
+                page.DraftRect = box;
+                _vm.SetStatusMessage("Click where the callout arrow should point");
+                UpdateCursor();
+                return;
+            }
+
+            page.DraftRect = null;
+            _ = _vm.AddAnnotationAsync(_vm.CreateTextbox(_boxPageIndex, box, AnnotationKind.Textbox), beginEdit: true);
+            return;
+        }
+
+        if ((_isMovingAnnotation || _isResizingAnnotation) && _dragAnnotation is { } dragged && _dragOriginal is { } original)
+        {
+            _isMovingAnnotation = false;
+            _isResizingAnnotation = false;
+            e.Pointer.Capture(null);
+            e.Handled = true;
+            UpdateCursor();
+            if (_moved)
+                _ = _vm?.MoveOrResizeAsync(dragged, dragged.Model);
+            else
+                dragged.Model = original;
+            _dragAnnotation = null;
+            _dragOriginal = null;
+            return;
+        }
+
         if (!_isSelecting)
             return;
 
+        var wasMarkup = _vm?.IsMarkupTool == true;
+        var kind = _vm?.AnnotationTool.Kind();
         _isSelecting = false;
         _vm?.EndSelection();
         e.Pointer.Capture(null);
         e.Handled = true;
+
+        if (wasMarkup && kind is { } markup && _vm is not null)
+            _ = _vm.MarkupSelection(markup.ToString());
 
         var position = e.GetPosition(PageScroller);
         DispatcherTimer.RunOnce(() => UpdatePopupHover(position), TimeSpan.FromMilliseconds(150));
@@ -598,10 +830,28 @@ public partial class DocumentView : UserControl
         switch (e.Key)
         {
             case Key.Escape:
-                if (_vm.Search.IsOpen && !_vm.HasSelection)
+                if (_waitingCalloutTarget)
+                {
+                    _waitingCalloutTarget = false;
+                    if (_boxPageIndex >= 0)
+                    {
+                        _vm.Pages[_boxPageIndex].DraftRect = null;
+                        _vm.Pages[_boxPageIndex].DraftCalloutTarget = null;
+                    }
+                }
+                else if (_vm.HasAnnotationTool)
+                    _vm.AnnotationTool = AnnotationTool.None;
+                else if (_vm.HasSelectedAnnotation)
+                    _vm.ClearAnnotationSelection();
+                else if (_vm.Search.IsOpen && !_vm.HasSelection)
                     _vm.Search.CloseCommand.Execute(null);
                 _vm.ClearSelection();
                 HidePopup();
+                HideEditors();
+                break;
+            case Key.Delete:
+                if (_vm.HasSelectedAnnotation && _vm.DeleteSelectedAnnotationsCommand.CanExecute(null))
+                    _vm.DeleteSelectedAnnotationsCommand.Execute(null);
                 break;
             case Key.Left:
                 _vm.PreviousPageCommand.Execute(null);
@@ -756,5 +1006,111 @@ public partial class DocumentView : UserControl
     {
         if (sender is Control { DataContext: PdfPageViewModel page })
             _vm?.GoToPage(page.Index);
+    }
+
+    private void OnTextEditRequested(AnnotationViewModel annotation)
+    {
+        HideEditors();
+        PositionTextEditor(annotation);
+        var size = PageToLayerSize(annotation.PageIndex, annotation.Model.Bounds.Size);
+        AnnotationEditorHost.Begin(annotation, size ?? new Size(120, 24));
+    }
+
+    private void OnNotePopupRequested(AnnotationViewModel annotation)
+    {
+        HideEditors();
+        NotePopupHost.Begin(annotation);
+        PositionNotePopup(annotation);
+    }
+
+    private void PositionOpenEditors()
+    {
+        if (AnnotationEditorHost.Annotation is { } text)
+            PositionTextEditor(text);
+        if (NotePopupHost.Annotation is { } note)
+            PositionNotePopup(note);
+    }
+
+    private void PositionTextEditor(AnnotationViewModel annotation)
+    {
+        if (PageToLayer(annotation.PageIndex, annotation.Model.Bounds.TopLeft) is not { } origin ||
+            PageToLayerSize(annotation.PageIndex, annotation.Model.Bounds.Size) is not { } size)
+            return;
+
+        AnnotationEditorHost.Width = Math.Max(24, size.Width);
+        AnnotationEditorHost.Height = Math.Max(16, size.Height);
+        Canvas.SetLeft(AnnotationEditorHost, origin.X);
+        Canvas.SetTop(AnnotationEditorHost, origin.Y);
+    }
+
+    private void PositionNotePopup(AnnotationViewModel annotation)
+    {
+        if (PageToLayer(annotation.PageIndex, annotation.Model.Bounds.TopRight) is not { } origin)
+            return;
+
+        NotePopupHost.Measure(Size.Infinity);
+        var x = origin.X + 8;
+        var y = origin.Y;
+        var layer = PopupLayer.Bounds.Size;
+        if (x + NotePopupHost.DesiredSize.Width > layer.Width)
+            x = Math.Max(4, origin.X - NotePopupHost.DesiredSize.Width - 8);
+        Canvas.SetLeft(NotePopupHost, x);
+        Canvas.SetTop(NotePopupHost, Math.Clamp(y, 4, Math.Max(4, layer.Height - NotePopupHost.DesiredSize.Height - 4)));
+    }
+
+    private Point? PageToLayer(int pageIndex, Point pagePoint)
+    {
+        if (PageSurface(pageIndex) is not { } surface || _vm is null)
+            return null;
+
+        var scale = surface.Bounds.Width / _vm.Pages[pageIndex].WidthPoints;
+        return surface.TranslatePoint(new Point(pagePoint.X * scale, pagePoint.Y * scale), PopupLayer);
+    }
+
+    private Size? PageToLayerSize(int pageIndex, Size pageSize)
+    {
+        if (PageSurface(pageIndex) is not { } surface || _vm is null)
+            return null;
+
+        var scale = surface.Bounds.Width / _vm.Pages[pageIndex].WidthPoints;
+        return new Size(pageSize.Width * scale, pageSize.Height * scale);
+    }
+
+    private async Task FinishEdit(AnnotationViewModel annotation, string? text, bool cancel)
+    {
+        if (_vm is null)
+            return;
+
+        if (cancel)
+            await _vm.CancelEditAsync(annotation, deleteIfNew: true);
+        else
+            await _vm.CommitEditAsync(annotation, text ?? string.Empty);
+
+        HideEditors();
+    }
+
+    private async Task DeleteFromPopup(AnnotationViewModel annotation)
+    {
+        if (_vm is null)
+            return;
+
+        await _vm.CancelEditAsync(annotation, deleteIfNew: false);
+        _vm.SelectAnnotation(annotation, add: false);
+        if (_vm.DeleteSelectedAnnotationsCommand.CanExecute(null))
+            await _vm.DeleteSelectedAnnotationsCommand.ExecuteAsync(null);
+        HideEditors();
+    }
+
+    private void HideEditors()
+    {
+        AnnotationEditorHost.HideEditor();
+        NotePopupHost.HidePopup();
+    }
+
+    private static Rect NormalizeDraft(Point a, Point b)
+    {
+        var x = Math.Min(a.X, b.X);
+        var y = Math.Min(a.Y, b.Y);
+        return new Rect(x, y, Math.Max(8, Math.Abs(b.X - a.X)), Math.Max(8, Math.Abs(b.Y - a.Y)));
     }
 }

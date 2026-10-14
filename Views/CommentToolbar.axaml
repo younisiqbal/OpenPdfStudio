@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             xmlns:models="using:OpenPdfStudio.Models"
+             x:Class="OpenPdfStudio.Views.CommentToolbar"
+             x:DataType="vm:DocumentViewModel">
+  <Border Background="{DynamicResource SystemChromeLowColor}"
+          BorderBrush="{DynamicResource HairlineBrush}"
+          BorderThickness="0,0,0,1"
+          Padding="8,4">
+    <StackPanel Orientation="Horizontal" Spacing="2">
+      <Button Classes="icon" Classes.active="{Binding IsHighlightTool}"
+              Command="{Binding UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Highlight}"
+              ToolTip.Tip="Highlight">
+        <PathIcon Data="{StaticResource HighlightIcon}" />
+      </Button>
+      <Button Classes="icon" Classes.active="{Binding IsUnderlineTool}"
+              Command="{Binding UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Underline}"
+              ToolTip.Tip="Underline">
+        <PathIcon Data="{StaticResource UnderlineIcon}" />
+      </Button>
+      <Button Classes="icon" Classes.active="{Binding IsStrikeOutTool}"
+              Command="{Binding UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.StrikeOut}"
+              ToolTip.Tip="Strikeout">
+        <PathIcon Data="{StaticResource StrikethroughIcon}" />
+      </Button>
+      <Button Classes="icon" Classes.active="{Binding IsSquigglyTool}"
+              Command="{Binding UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Squiggly}"
+              ToolTip.Tip="Squiggly underline">
+        <PathIcon Data="{StaticResource SquigglyIcon}" />
+      </Button>
+      <Border Width="1" Margin="6,4" Background="{DynamicResource HairlineBrush}" />
+      <Button Classes="icon" Classes.active="{Binding IsNoteTool}"
+              Command="{Binding UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Note}"
+              ToolTip.Tip="Note">
+        <PathIcon Data="{StaticResource CommentIcon}" />
+      </Button>
+      <Button Classes="icon" Classes.active="{Binding IsTypewriterTool}"
+              Command="{Binding UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Typewriter}"
+              ToolTip.Tip="Typewriter">
+        <PathIcon Data="{StaticResource TypewriterIcon}" />
+      </Button>
+      <Button Classes="icon" Classes.active="{Binding IsTextboxTool}"
+              Command="{Binding UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Textbox}"
+              ToolTip.Tip="Textbox">
+        <PathIcon Data="{StaticResource TextBoxIcon}" />
+      </Button>
+      <Button Classes="icon" Classes.active="{Binding IsCalloutTool}"
+              Command="{Binding UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Callout}"
+              ToolTip.Tip="Callout">
+        <PathIcon Data="{StaticResource CalloutIcon}" />
+      </Button>
+      <Border Width="1" Margin="6,4" Background="{DynamicResource HairlineBrush}" />
+      <Button Classes="icon" Classes.active="{Binding KeepToolSelected}"
+              Command="{Binding ToggleKeepToolSelectedCommand}"
+              ToolTip.Tip="Keep tool selected">
+        <PathIcon Data="{StaticResource PinIcon}" />
+      </Button>
+      <Button Classes="icon" Classes.active="{Binding IsFormatPanelOpen}"
+              Command="{Binding OpenFormatPanelCommand}"
+              ToolTip.Tip="Format">
+        <PathIcon Data="{StaticResource PaletteIcon}" />
+      </Button>
+    </StackPanel>
+  </Border>
+</UserControl>

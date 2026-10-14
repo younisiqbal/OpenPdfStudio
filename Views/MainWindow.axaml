@@ -45,6 +45,9 @@
     <KeyBinding Gesture="Ctrl+P" Command="{Binding PrintCommand}" />
     <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
     <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveAsCommand}" />
+    <KeyBinding Gesture="Ctrl+Z" Command="{Binding ActiveDocument.UndoCommand, FallbackValue={x:Null}}" />
+    <KeyBinding Gesture="Ctrl+Y" Command="{Binding ActiveDocument.RedoCommand, FallbackValue={x:Null}}" />
+    <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding ActiveDocument.RedoCommand, FallbackValue={x:Null}}" />
   </Window.KeyBindings>
 
   <DockPanel>
@@ -65,8 +68,8 @@
         <MenuItem Header="E_xit" InputGesture="Alt+F4" Command="{Binding ExitCommand}" />
       </MenuItem>
       <MenuItem Header="_Edit">
-        <MenuItem Header="_Undo" InputGesture="Ctrl+Z" IsEnabled="False" />
-        <MenuItem Header="_Redo" InputGesture="Ctrl+Y" IsEnabled="False" />
+        <MenuItem Header="_Undo" InputGesture="Ctrl+Z" Command="{Binding ActiveDocument.UndoCommand, FallbackValue={x:Null}}" />
+        <MenuItem Header="_Redo" InputGesture="Ctrl+Y" Command="{Binding ActiveDocument.RedoCommand, FallbackValue={x:Null}}" />
         <Separator />
         <MenuItem Header="_Copy" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
         <MenuItem Header="_Paste" InputGesture="Ctrl+V" Command="{Binding PasteCommand}" />
@@ -104,6 +107,12 @@
         <MenuItem Header="Rea_d Mode" InputGesture="Ctrl+H" Command="{Binding ToggleReadModeCommand}" />
         <MenuItem Header="_Full Screen" InputGesture="F11" Command="{Binding ToggleFullScreenCommand}" />
         <Separator />
+        <MenuItem Header="_Comment toolbar" Command="{Binding ActiveDocument.ToggleCommentToolbarCommand, FallbackValue={x:Null}}">
+          <MenuItem.Icon>
+            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                      IsVisible="{Binding ActiveDocument.IsCommentToolbarVisible, FallbackValue=False}" />
+          </MenuItem.Icon>
+        </MenuItem>
         <MenuItem Header="_Ruler" InputGesture="Ctrl+R" Command="{Binding ToggleRulerCommand}">
           <MenuItem.Icon>
             <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
@@ -284,6 +293,15 @@
             <StackPanel Spacing="2">
               <PathIcon Data="{StaticResource OutlineIcon}" />
               <TextBlock Text="Pages" FontSize="11" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsCommentToolbarVisible, FallbackValue=False}"
+                  Command="{Binding ActiveDocument.ToggleCommentToolbarCommand, FallbackValue={x:Null}}"
+                  IsVisible="{Binding HasActiveDocument}"
+                  ToolTip.Tip="Show or hide comment tools">
+            <StackPanel Spacing="2">
+              <PathIcon Data="{StaticResource CommentIcon}" />
+              <TextBlock Text="Comment" FontSize="11" HorizontalAlignment="Center" />
             </StackPanel>
           </Button>
           <Button Classes="nav" ToolTip.Tip="Recent files" Command="{Binding ShowHomeCommand}">

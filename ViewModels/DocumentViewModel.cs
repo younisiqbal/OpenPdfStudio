@@ -66,6 +66,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         };
 
         Search = new DocumentSearchViewModel(this, session, setStatus);
+        InitAnnotations();
 
         ViewerPreferences.Changed += OnViewerPreferencesChanged;
         ApplyZoomToPages();
@@ -119,7 +120,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _pageInput;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsHandTool), nameof(IsSelectTool))]
+    [NotifyPropertyChangedFor(nameof(IsHandTool), nameof(IsSelectTool), nameof(IsSelectAnnotationTool))]
     private ViewerTool _tool = ViewerTool.Hand;
 
     [ObservableProperty]
@@ -132,7 +133,8 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
 
     /// <summary>True in Read Mode and Full Screen; the thumbnails and bottom bar are hidden.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowThumbnails), nameof(ShowBottomBar))]
+    [NotifyPropertyChangedFor(nameof(ShowThumbnails), nameof(ShowBottomBar),
+        nameof(ShowCommentChrome), nameof(ShowFormatPanel))]
     private bool _isPresenting;
 
     public bool ShowThumbnails => IsThumbnailsVisible && !IsPresenting;
@@ -173,12 +175,17 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void UseHandTool()
     {
+        AnnotationTool = AnnotationTool.None;
         Tool = ViewerTool.Hand;
         ClearSelection();
     }
 
     [RelayCommand]
-    private void UseSelectTool() => Tool = ViewerTool.Select;
+    private void UseSelectTool()
+    {
+        AnnotationTool = AnnotationTool.None;
+        Tool = ViewerTool.Select;
+    }
 
     public bool IsPalmAndFistCursor => ViewerPreferences.HandCursorStyle == HandCursorStyle.PalmAndFist;
     public bool IsPalmCursor => ViewerPreferences.HandCursorStyle == HandCursorStyle.Palm;
@@ -221,10 +228,16 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(RulerUnit));
         OnPropertyChanged(nameof(IsRulerInches));
         OnPropertyChanged(nameof(IsRulerCentimeters));
+        OnPropertyChanged(nameof(IsCommentToolbarVisible));
+        OnPropertyChanged(nameof(KeepToolSelected));
+        OnPropertyChanged(nameof(ShowCommentChrome));
+        OnPropertyChanged(nameof(ShowFormatPanel));
     }
 
     [RelayCommand]
     private void ComingSoon(string? feature) => _setStatus($"{feature}: coming soon");
+
+    public void SetStatusMessage(string message) => _setStatus(message);
 
     partial void OnZoomPercentChanged(double value)
     {
@@ -458,6 +471,9 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
 
         if (!_renderDebounce.IsEnabled)
             RequestRenders();
+
+        foreach (var index in visible)
+            _ = EnsureAnnotationsAsync(Pages[index]);
     }
 
     /// <summary>
@@ -884,6 +900,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
 
         _disposed = true;
         Search.Dispose();
+        _undo.Changed -= OnUndoStackChanged;
         ViewerPreferences.Changed -= OnViewerPreferencesChanged;
         _renderDebounce.Stop();
         _zoomCts.Cancel();

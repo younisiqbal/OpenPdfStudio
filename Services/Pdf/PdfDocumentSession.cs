@@ -28,7 +28,7 @@ public sealed class PdfOpenException(PdfOpenError error, string message) : Excep
 /// One open PDF document. All public methods marshal onto <see cref="PdfiumWorker"/>.
 /// Page coordinates exposed here are in PDF points with a top-left origin, matching how pages are drawn.
 /// </summary>
-public sealed class PdfDocumentSession : IDisposable
+public sealed partial class PdfDocumentSession : IDisposable
 {
     private const int MaxCachedTextPages = 8;
     private const double DeviceScale = 20;
@@ -613,6 +613,7 @@ public sealed class PdfDocumentSession : IDisposable
         _textPages.Clear();
         _textPageOrder.Clear();
         _pageTexts.Clear();
+        CloseFonts();
         fpdfview.FPDF_CloseDocument(_document);
 
         if (_buffer != IntPtr.Zero)
@@ -635,8 +636,24 @@ public sealed class PdfDocumentSession : IDisposable
     /// Maps the view's top-left point space onto PDF user space for one page. Built from PDFium's own
     /// device-to-page conversion, so /Rotate and offset media boxes are handled.
     /// </summary>
-    private readonly record struct PageSpaceMap(Vector Origin, Vector PerPointX, Vector PerPointY)
+    internal readonly record struct PageSpaceMap(Vector Origin, Vector PerPointX, Vector PerPointY)
     {
+        /// <summary>Converts a top-left point on the page to PDF user space.</summary>
+        public Vector ToPage(Point point) => Origin + PerPointX * point.X + PerPointY * point.Y;
+
+        /// <summary>Converts a point in PDF user space back to the top-left page space.</summary>
+        public Point ToView(double x, double y)
+        {
+            var d = new Vector(x, y) - Origin;
+            var det = PerPointX.X * PerPointY.Y - PerPointY.X * PerPointX.Y;
+            if (Math.Abs(det) < 1e-9)
+                return new Point(d.X, -d.Y);
+
+            return new Point(
+                (d.X * PerPointY.Y - PerPointY.X * d.Y) / det,
+                (PerPointX.X * d.Y - d.X * PerPointX.Y) / det);
+        }
+
         public static PageSpaceMap For(FpdfPageT page, Size sizeInPoints)
         {
             var width = (int)Math.Round(sizeInPoints.Width * DeviceScale);

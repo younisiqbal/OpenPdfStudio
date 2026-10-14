@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading;
 using Avalonia;
 using Avalonia.Media;
@@ -37,6 +38,11 @@ public partial class PdfPageViewModel : ObservableObject, ICachedPageBitmap
     [ObservableProperty] private IReadOnlyList<Rect>? _searchRects;
     [ObservableProperty] private IReadOnlyList<Rect>? _currentMatchRects;
     [ObservableProperty] private ITransform? _pageTransform;
+    [ObservableProperty] private Rect? _draftRect;
+    [ObservableProperty] private Point? _draftCalloutTarget;
+
+    public ObservableCollection<AnnotationViewModel> Annotations { get; } = new();
+    public bool AnnotationsLoaded { get; set; }
 
     public int RenderedPixelWidth { get; private set; }
     public int PendingPixelWidth { get; set; }

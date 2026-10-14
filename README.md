@@ -20,6 +20,7 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 - Rotate the page view.
 - Hand tool for panning, with a choice of cursor styles.
 - Select text on a page and copy it to the clipboard.
+- Comment tools: Note, Typewriter, Textbox, Callout, Highlight, Underline, Strikeout and Squiggly. They are saved as real PDF annotations. A Format panel sets font, size, colour, bold/italic/underline/strikeout, alignment, opacity, note icon, and border/fill for the whole annotation. Undo and Redo cover annotation changes.
 - Right-click a page for Paste, Read Mode, Full Screen, zoom and fit options, Rotate Right, Print, and Rulers.
 - Paste text or an image from the clipboard onto a page. Paste puts it where you right-clicked (or under the pointer). Paste in Place puts text copied from a PDF back at the same spot. Pasted text uses Helvetica, so it covers Western European characters only.
 - Save (Ctrl+S) and Save As (Ctrl+Shift+S) keep pasted changes. A dot on the tab marks unsaved changes, and you are asked before a modified file is closed.
@@ -46,6 +47,9 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 | Ctrl+0 | Fit page |
 | Ctrl+2 | Fit width |
 | Ctrl+Shift+Plus | Rotate the view right |
+| Ctrl+Z | Undo the last annotation change |
+| Ctrl+Y | Redo |
+| Delete | Delete the selected annotation |
 | Ctrl+C | Copy selected text |
 | Ctrl+V | Paste onto the page |
 | Ctrl+Alt+V | Paste in place |

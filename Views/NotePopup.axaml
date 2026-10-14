@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="OpenPdfStudio.Views.NotePopup"
+             Width="240">
+  <Border Background="#FFFCE98A"
+          BorderBrush="#D6C24A"
+          BorderThickness="1"
+          CornerRadius="2"
+          BoxShadow="0 2 10 0 #40000000">
+    <DockPanel>
+      <Border DockPanel.Dock="Top" Background="#F5E56A" Padding="8,6">
+        <DockPanel>
+          <Button x:Name="CloseButton" DockPanel.Dock="Right" Classes="icon" Padding="2"
+                  ToolTip.Tip="Close">
+            <PathIcon Data="{StaticResource CloseIcon}" Width="10" Height="10" Foreground="#333" />
+          </Button>
+          <TextBlock x:Name="TitleText" FontSize="12" FontWeight="SemiBold" Foreground="#333"
+                     VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+      </Border>
+      <DockPanel Margin="8,6">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+          <TextBlock x:Name="AuthorText" FontSize="11" Foreground="#333" />
+          <Button x:Name="OptionsButton" Classes="icon" Padding="2" FontSize="11" Foreground="#333"
+                  Content="Options ▾" />
+        </StackPanel>
+        <TextBox x:Name="Editor"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 MinHeight="90"
+                 BorderThickness="0"
+                 Background="Transparent"
+                 Foreground="#222"
+                 CaretBrush="#222" />
+      </DockPanel>
+    </DockPanel>
+  </Border>
+</UserControl>

@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="OpenPdfStudio.Views.AnnotationEditor"
+             Focusable="True">
+  <TextBox x:Name="Editor"
+           AcceptsReturn="True"
+           TextWrapping="Wrap"
+           BorderThickness="0"
+           Padding="4,2"
+           Background="Transparent"
+           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+           ScrollViewer.VerticalScrollBarVisibility="Disabled" />
+</UserControl>
