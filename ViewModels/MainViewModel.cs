@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -6,6 +7,8 @@ using System.Threading.Tasks;
 using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using OpenPdfStudio.Models;
+using OpenPdfStudio.Services;
 using OpenPdfStudio.Services.Pdf;
 using OpenPdfStudio.Themes;
 
@@ -21,28 +24,42 @@ public partial class MainViewModel : ViewModelBase
         "theme.txt");
 
     [ObservableProperty] private string _status = "Ready";
-    [ObservableProperty] private string _version = "v0.1.0-dev";
+    [ObservableProperty] private string _version = "v0.2.0";
     [ObservableProperty] private ViewModelBase _currentPage;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsHomeActive), nameof(HasActiveDocument))]
+    [NotifyPropertyChangedFor(nameof(IsHomeActive), nameof(HasActiveDocument), nameof(ShowRibbon), nameof(ShowRailDivider))]
     [NotifyCanExecuteChangedFor(nameof(ZoomInCommand), nameof(ZoomOutCommand), nameof(FitWidthCommand),
         nameof(FitPageCommand), nameof(CloseActiveTabCommand), nameof(CopySelectionCommand),
         nameof(FindCommand), nameof(FindNextCommand), nameof(FindPreviousCommand), nameof(ToggleRulerCommand),
         nameof(ActualSizeCommand), nameof(RotateClockwiseCommand), nameof(PasteCommand), nameof(PasteInPlaceCommand),
         nameof(SaveCommand), nameof(SaveAsCommand), nameof(PrintCommand), nameof(ToggleReadModeCommand),
-        nameof(ToggleFullScreenCommand))]
+        nameof(ToggleFullScreenCommand), nameof(SelectRibbonTabCommand))]
     private DocumentViewModel? _activeDocument;
 
     /// <summary>Read Mode: the document fills the window with menus, tabs, rail and status bar hidden.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible))]
+    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowRibbon))]
     private bool _isReadMode;
 
     /// <summary>Full Screen: like Read Mode, and the window covers the whole screen.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible))]
+    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowRibbon))]
     private bool _isFullScreen;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHomeTab), nameof(IsEditTab), nameof(IsCommentTab), nameof(IsViewTab),
+        nameof(IsHomeRibbon), nameof(IsEditRibbon), nameof(IsCommentRibbon), nameof(IsViewRibbon))]
+    private RibbonTab _selectedRibbonTab = RibbonTab.Home;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRibbonExpanded), nameof(IsHomeRibbon), nameof(IsEditRibbon),
+        nameof(IsCommentRibbon), nameof(IsViewRibbon))]
+    private bool _isRibbonCollapsed;
+
+    [ObservableProperty] private int _pinEpoch;
+
+    private readonly List<RailPinItem> _railItems = [];
 
     public bool IsPresenting => IsReadMode || IsFullScreen;
     public bool IsChromeVisible => !IsPresenting;
@@ -61,6 +78,22 @@ public partial class MainViewModel : ViewModelBase
 
     public bool IsHomeActive => ActiveDocument is null;
     public bool HasActiveDocument => ActiveDocument is not null;
+    public bool ShowRibbon => HasActiveDocument && IsChromeVisible;
+    public bool IsRibbonExpanded => !IsRibbonCollapsed;
+    public bool IsHomeTab => SelectedRibbonTab == RibbonTab.Home;
+    public bool IsEditTab => SelectedRibbonTab == RibbonTab.Edit;
+    public bool IsCommentTab => SelectedRibbonTab == RibbonTab.Comment;
+    public bool IsViewTab => SelectedRibbonTab == RibbonTab.View;
+    public bool IsHomeRibbon => IsHomeTab && IsRibbonExpanded;
+    public bool IsEditRibbon => IsEditTab && IsRibbonExpanded;
+    public bool IsCommentRibbon => IsCommentTab && IsRibbonExpanded;
+    public bool IsViewRibbon => IsViewTab && IsRibbonExpanded;
+
+    public IReadOnlyList<RailPinGroup> RailGroups { get; }
+
+    public bool ShowRailDivider =>
+        RailCatalog.All.Any(entry => entry.AboveDivider && IsRailEntryVisible(entry)) &&
+        RailCatalog.All.Any(entry => !entry.AboveDivider && IsRailEntryVisible(entry));
 
     public HomeViewModel Home { get; }
     public ObservableCollection<DocumentViewModel> Documents { get; } = new();
@@ -87,6 +120,9 @@ public partial class MainViewModel : ViewModelBase
 
     public MainViewModel()
     {
+        _isRibbonCollapsed = ViewerPreferences.RibbonCollapsed;
+        RailGroups = CreateRailGroups();
+        ViewerPreferences.Changed += OnViewerPreferencesChanged;
         Home = new HomeViewModel(s => Status = s, OpenPdfAsync, OpenPathAsync);
         AdvancedSearch = new AdvancedSearchViewModel(() => ActiveDocument, () => Documents.ToList(),
             OpenAndGetDocumentAsync, s => Status = s);
@@ -98,15 +134,77 @@ public partial class MainViewModel : ViewModelBase
     partial void OnActiveDocumentChanged(DocumentViewModel? oldValue, DocumentViewModel? newValue)
     {
         if (oldValue is not null)
+        {
             oldValue.IsActive = false;
+            oldValue.CommentRibbonRequested -= ShowCommentRibbon;
+        }
+
         if (newValue is not null)
+        {
             newValue.IsActive = true;
+            newValue.CommentRibbonRequested += ShowCommentRibbon;
+        }
 
         CurrentPage = (ViewModelBase?)newValue ?? Home;
         TopSearch.OnActiveDocumentChanged();
         if (newValue is null)
             ExitPresentation();
     }
+
+    partial void OnIsRibbonCollapsedChanged(bool value)
+    {
+        if (ViewerPreferences.RibbonCollapsed != value)
+            ViewerPreferences.RibbonCollapsed = value;
+    }
+
+    private IReadOnlyList<RailPinGroup> CreateRailGroups()
+    {
+        var groups = new List<RailPinGroup>();
+        foreach (var name in RailCatalog.GroupOrder)
+        {
+            var items = new List<RailPinItem>();
+            foreach (var command in RailCatalog.All.Where(entry => entry.Group == name))
+            {
+                var item = new RailPinItem(command.Id, command.Label);
+                _railItems.Add(item);
+                items.Add(item);
+            }
+
+            groups.Add(new RailPinGroup(name, items));
+        }
+
+        return groups;
+    }
+
+    private bool IsRailEntryVisible(RailCommand entry) =>
+        ViewerPreferences.IsPinned(entry.Id) && (!entry.RequiresDocument || HasActiveDocument);
+
+    private void OnViewerPreferencesChanged()
+    {
+        foreach (var item in _railItems)
+            item.Sync(ViewerPreferences.IsPinned(item.Id));
+
+        PinEpoch++;
+        OnPropertyChanged(nameof(ShowRailDivider));
+        if (IsRibbonCollapsed != ViewerPreferences.RibbonCollapsed)
+            IsRibbonCollapsed = ViewerPreferences.RibbonCollapsed;
+    }
+
+    private void ShowCommentRibbon() => SelectRibbonTab(RibbonTab.Comment.ToString());
+
+    [RelayCommand(CanExecute = nameof(HasActiveDocument))]
+    private void SelectRibbonTab(string? tab)
+    {
+        if (!Enum.TryParse(tab, out RibbonTab value))
+            return;
+
+        SelectedRibbonTab = value;
+        if (IsRibbonCollapsed)
+            IsRibbonCollapsed = false;
+    }
+
+    [RelayCommand]
+    private void ToggleRibbonCollapsed() => IsRibbonCollapsed = !IsRibbonCollapsed;
 
     partial void OnIsReadModeChanged(bool value) => OnPresentationChanged();
     partial void OnIsFullScreenChanged(bool value) => OnPresentationChanged();

@@ -1,0 +1,425 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             xmlns:models="using:OpenPdfStudio.Models"
+             x:Class="OpenPdfStudio.Views.RibbonBar"
+             x:DataType="vm:MainViewModel">
+  <UserControl.Styles>
+    <Style Selector="Button.ribbonTab">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0,0,0,2" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Padding" Value="14,8,14,6" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Button.ribbonTab:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+    </Style>
+    <Style Selector="Button.ribbonTab.active">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="StackPanel.ribbon Button.tool">
+      <Setter Property="VerticalAlignment" Value="Top" />
+    </Style>
+    <Style Selector="Button.tool PathIcon.chevron">
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="Margin" Value="0,-2,0,0" />
+    </Style>
+    <Style Selector="TextBlock.group">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Opacity" Value="0.55" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,2,0,4" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Background="{DynamicResource SystemChromeLowColor}"
+          BorderBrush="{DynamicResource HairlineBrush}"
+          BorderThickness="0,0,0,1">
+    <DockPanel>
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="8,0,4,0">
+        <StackPanel Orientation="Horizontal">
+          <Button Classes="ribbonTab" Classes.active="{Binding IsHomeTab}" Content="Home"
+                  Command="{Binding SelectRibbonTabCommand}" CommandParameter="Home" />
+          <Button Classes="ribbonTab" Classes.active="{Binding IsEditTab}" Content="Edit"
+                  Command="{Binding SelectRibbonTabCommand}" CommandParameter="Edit" />
+          <Button Classes="ribbonTab" Classes.active="{Binding IsCommentTab}" Content="Comment"
+                  Command="{Binding SelectRibbonTabCommand}" CommandParameter="Comment" />
+          <Button Classes="ribbonTab" Classes.active="{Binding IsViewTab}" Content="View"
+                  Command="{Binding SelectRibbonTabCommand}" CommandParameter="View" />
+        </StackPanel>
+        <Button Grid.Column="1" Classes="icon" VerticalAlignment="Center"
+                Command="{Binding ToggleRibbonCollapsedCommand}"
+                ToolTip.Tip="Show or hide the ribbon">
+          <Panel>
+            <PathIcon Data="{StaticResource ChevronUpIcon}" IsVisible="{Binding IsRibbonExpanded}" />
+            <PathIcon Data="{StaticResource ChevronDownIcon}" IsVisible="{Binding IsRibbonCollapsed}" />
+          </Panel>
+        </Button>
+      </Grid>
+
+      <ScrollViewer IsVisible="{Binding IsRibbonExpanded}"
+                    HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Disabled">
+        <Grid Margin="6,2,6,0">
+          <StackPanel Classes="ribbon" Orientation="Horizontal" IsVisible="{Binding IsHomeRibbon}">
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Clipboard" />
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Command="{Binding ActiveDocument.CopySelectionCommand}"
+                        ToolTip.Tip="Copy (Ctrl+C)">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource CopyIcon}" />
+                    <TextBlock Text="Copy" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" ToolTip.Tip="Paste (Ctrl+V)">
+                  <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                      <MenuItem Header="Paste" InputGesture="Ctrl+V" Command="{Binding PasteCommand}" />
+                      <MenuItem Header="Paste in place" InputGesture="Ctrl+Alt+V" Command="{Binding PasteInPlaceCommand}" />
+                    </MenuFlyout>
+                  </Button.Flyout>
+                  <StackPanel Spacing="1">
+                    <PathIcon Data="{StaticResource ClipboardIcon}" />
+                    <TextBlock Text="Paste" />
+                    <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+            <Border Width="1" Margin="2,6" Background="{DynamicResource HairlineBrush}" />
+
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Tools" />
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsHandTool, FallbackValue=False}"
+                        ToolTip.Tip="Hand tool: drag to scroll, drag on text to select">
+                  <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                      <MenuItem Header="Hand tool" Command="{Binding ActiveDocument.UseHandToolCommand}" />
+                      <Separator />
+                      <MenuItem Header="Hand cursor" IsEnabled="False" />
+                      <MenuItem Header="Open palm, fist while dragging"
+                                Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="PalmAndFist">
+                        <MenuItem.Icon>
+                          <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                    IsVisible="{Binding ActiveDocument.IsPalmAndFistCursor, FallbackValue=False}" />
+                        </MenuItem.Icon>
+                      </MenuItem>
+                      <MenuItem Header="Open palm"
+                                Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="Palm">
+                        <MenuItem.Icon>
+                          <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                    IsVisible="{Binding ActiveDocument.IsPalmCursor, FallbackValue=False}" />
+                        </MenuItem.Icon>
+                      </MenuItem>
+                      <MenuItem Header="Move arrows"
+                                Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="MoveArrows">
+                        <MenuItem.Icon>
+                          <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                    IsVisible="{Binding ActiveDocument.IsMoveArrowsCursor, FallbackValue=False}" />
+                        </MenuItem.Icon>
+                      </MenuItem>
+                      <MenuItem Header="Pointing finger"
+                                Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="PointingFinger">
+                        <MenuItem.Icon>
+                          <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                    IsVisible="{Binding ActiveDocument.IsPointingFingerCursor, FallbackValue=False}" />
+                        </MenuItem.Icon>
+                      </MenuItem>
+                    </MenuFlyout>
+                  </Button.Flyout>
+                  <StackPanel Spacing="1">
+                    <PathIcon Data="{StaticResource HandIcon}" />
+                    <TextBlock Text="Hand" />
+                    <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsSelectTool, FallbackValue=False}"
+                        ToolTip.Tip="Select tool">
+                  <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                      <MenuItem Header="Select text" Command="{Binding ActiveDocument.UseSelectToolCommand}" />
+                      <MenuItem Header="Select annotation" Command="{Binding ActiveDocument.UseSelectAnnotationToolCommand}" />
+                    </MenuFlyout>
+                  </Button.Flyout>
+                  <StackPanel Spacing="1">
+                    <PathIcon Data="{StaticResource SelectIcon}" />
+                    <TextBlock Text="Select" />
+                    <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Command="{Binding ActiveDocument.ComingSoonCommand}" CommandParameter="Snapshot"
+                        ToolTip.Tip="Snapshot (coming soon)">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource SnapshotIcon}" />
+                    <TextBlock Text="Snapshot" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+            <Border Width="1" Margin="2,6" Background="{DynamicResource HairlineBrush}" />
+
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Zoom" />
+              <Button Classes="tool" ToolTip.Tip="Zoom">
+                <Button.Flyout>
+                  <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                    <MenuItem Header="Zoom in" InputGesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
+                    <MenuItem Header="Zoom out" InputGesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
+                    <Separator />
+                    <MenuItem Header="50%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="50" />
+                    <MenuItem Header="75%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="75" />
+                    <MenuItem Header="100%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="100" />
+                    <MenuItem Header="125%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="125" />
+                    <MenuItem Header="150%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="150" />
+                    <MenuItem Header="200%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="200" />
+                    <MenuItem Header="400%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="400" />
+                  </MenuFlyout>
+                </Button.Flyout>
+                <StackPanel Spacing="1">
+                  <PathIcon Data="{StaticResource ZoomIcon}" />
+                  <TextBlock Text="Zoom" />
+                  <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+                </StackPanel>
+              </Button>
+            </DockPanel>
+            <Border Width="1" Margin="2,6" Background="{DynamicResource HairlineBrush}" />
+
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Page fit" />
+              <Button Classes="tool" ToolTip.Tip="Page fit options">
+                <Button.Flyout>
+                  <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                    <MenuItem Header="Fit width" Command="{Binding FitWidthCommand}" />
+                    <MenuItem Header="Fit page" Command="{Binding FitPageCommand}" />
+                    <MenuItem Header="Actual size" Command="{Binding ActualSizeCommand}" />
+                  </MenuFlyout>
+                </Button.Flyout>
+                <StackPanel Spacing="1">
+                  <PathIcon Data="{StaticResource PageFitIcon}" />
+                  <TextBlock Text="Page fit" />
+                  <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+                </StackPanel>
+              </Button>
+            </DockPanel>
+            <Border Width="1" Margin="2,6" Background="{DynamicResource HairlineBrush}" />
+
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Find" />
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Command="{Binding FindCommand}" ToolTip.Tip="Find (Ctrl+F)">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource SearchIcon}" />
+                    <TextBlock Text="Find" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Command="{Binding OpenAdvancedSearchCommand}"
+                        ToolTip.Tip="Advanced search (Ctrl+Shift+F)">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource AdvancedSearchIcon}" />
+                    <TextBlock Text="Advanced" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+          </StackPanel>
+
+          <StackPanel Classes="ribbon" Orientation="Horizontal" IsVisible="{Binding IsEditRibbon}">
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="History" />
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Command="{Binding ActiveDocument.UndoCommand}" ToolTip.Tip="Undo (Ctrl+Z)">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource UndoIcon}" />
+                    <TextBlock Text="Undo" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Command="{Binding ActiveDocument.RedoCommand}" ToolTip.Tip="Redo (Ctrl+Y)">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource RedoIcon}" />
+                    <TextBlock Text="Redo" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+          </StackPanel>
+
+          <StackPanel Classes="ribbon" Orientation="Horizontal" IsVisible="{Binding IsCommentRibbon}">
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Text markup" />
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsHighlightTool, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+                        CommandParameter="{x:Static models:AnnotationTool.Highlight}"
+                        ToolTip.Tip="Highlight">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource HighlightIcon}" Foreground="{Binding ActiveDocument.HighlightToolBrush}" />
+                    <TextBlock Text="Highlight" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsUnderlineTool, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+                        CommandParameter="{x:Static models:AnnotationTool.Underline}"
+                        ToolTip.Tip="Underline">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource UnderlineIcon}" />
+                    <TextBlock Text="Underline" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsStrikeOutTool, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+                        CommandParameter="{x:Static models:AnnotationTool.StrikeOut}"
+                        ToolTip.Tip="Strikeout">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource StrikethroughIcon}" />
+                    <TextBlock Text="Strikeout" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsSquigglyTool, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+                        CommandParameter="{x:Static models:AnnotationTool.Squiggly}"
+                        ToolTip.Tip="Squiggly underline">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource SquigglyIcon}" />
+                    <TextBlock Text="Squiggly" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+            <Border Width="1" Margin="2,6" Background="{DynamicResource HairlineBrush}" />
+
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Notes" />
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsNoteTool, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+                        CommandParameter="{x:Static models:AnnotationTool.Note}"
+                        ToolTip.Tip="Note">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource CommentIcon}" />
+                    <TextBlock Text="Note" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsTypewriterTool, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+                        CommandParameter="{x:Static models:AnnotationTool.Typewriter}"
+                        ToolTip.Tip="Typewriter">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource TypewriterIcon}" />
+                    <TextBlock Text="Typewriter" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsTextboxTool, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+                        CommandParameter="{x:Static models:AnnotationTool.Textbox}"
+                        ToolTip.Tip="Text box">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource TextBoxIcon}" />
+                    <TextBlock Text="Text box" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsCalloutTool, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+                        CommandParameter="{x:Static models:AnnotationTool.Callout}"
+                        ToolTip.Tip="Callout">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource CalloutIcon}" />
+                    <TextBlock Text="Callout" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+            <Border Width="1" Margin="2,6" Background="{DynamicResource HairlineBrush}" />
+
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Options" />
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.KeepToolSelected, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.ToggleKeepToolSelectedCommand}"
+                        ToolTip.Tip="Keep tool selected">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource PinIcon}" />
+                    <TextBlock Text="Keep tool" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsFormatPanelOpen, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.OpenFormatPanelCommand}"
+                        ToolTip.Tip="Format">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource PaletteIcon}" />
+                    <TextBlock Text="Format" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+          </StackPanel>
+
+          <StackPanel Classes="ribbon" Orientation="Horizontal" IsVisible="{Binding IsViewRibbon}">
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Show" />
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsThumbnailsVisible, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.ToggleThumbnailsCommand}"
+                        ToolTip.Tip="Show or hide page thumbnails">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource OutlineIcon}" />
+                    <TextBlock Text="Pages" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsRulerVisible, FallbackValue=False}"
+                        Command="{Binding ToggleRulerCommand}"
+                        ToolTip.Tip="Show or hide the ruler (Ctrl+R)">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource RulerIcon}" />
+                    <TextBlock Text="Ruler" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+            <Border Width="1" Margin="2,6" Background="{DynamicResource HairlineBrush}" />
+
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Modes" />
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Classes.active="{Binding IsReadMode}"
+                        Command="{Binding ToggleReadModeCommand}"
+                        ToolTip.Tip="Read Mode (Ctrl+H)">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource ReadModeIcon}" />
+                    <TextBlock Text="Read mode" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding IsFullScreen}"
+                        Command="{Binding ToggleFullScreenCommand}"
+                        ToolTip.Tip="Full Screen (F11)">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource FullscreenIcon}" />
+                    <TextBlock Text="Full screen" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
+            <Border Width="1" Margin="2,6" Background="{DynamicResource HairlineBrush}" />
+
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Page" />
+              <Button Classes="tool" Command="{Binding RotateClockwiseCommand}"
+                      ToolTip.Tip="Rotate right (Ctrl+Shift+Plus)">
+                <StackPanel Spacing="2">
+                  <PathIcon Data="{StaticResource RotatePageIcon}" />
+                  <TextBlock Text="Rotate" />
+                </StackPanel>
+              </Button>
+            </DockPanel>
+          </StackPanel>
+        </Grid>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</UserControl>

@@ -1,0 +1,531 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             xmlns:models="using:OpenPdfStudio.Models"
+             xmlns:conv="using:OpenPdfStudio.Views.Converters"
+             x:Class="OpenPdfStudio.Views.RailBar"
+             x:DataType="vm:MainViewModel">
+  <UserControl.Resources>
+    <conv:PinVisibilityConverter x:Key="PinVisible" />
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <Style Selector="Button.nav TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="TextAlignment" Value="Center" />
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+    <StackPanel Spacing="2">
+      <Button Classes="nav" Classes.active="{Binding IsHomeActive}"
+              Command="{Binding ShowHomeCommand}" ToolTip.Tip="Home">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Home">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource HomeIcon}" />
+          <TextBlock Text="Home" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsThumbnailsVisible, FallbackValue=False}"
+              Command="{Binding ActiveDocument.ToggleThumbnailsCommand}"
+              ToolTip.Tip="Show or hide page thumbnails">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Pages">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource OutlineIcon}" />
+          <TextBlock Text="Pages" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding IsCommentTab}"
+              Command="{Binding SelectRibbonTabCommand}" CommandParameter="Comment"
+              ToolTip.Tip="Comment tools">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Comment">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource CommentIcon}" />
+          <TextBlock Text="Comment" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding IsHomeActive}"
+              Command="{Binding ShowHomeCommand}" ToolTip.Tip="Recent files">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Recent">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource RecentIcon}" />
+          <TextBlock Text="Recent" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding IsHomeActive}"
+              Command="{Binding ShowHomeCommand}" ToolTip.Tip="Starred files">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Starred">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource StarIcon}" />
+          <TextBlock Text="Starred" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" IsEnabled="False" ToolTip.Tip="Settings — coming soon">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Settings">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource SettingsIcon}" />
+          <TextBlock Text="Settings" />
+        </StackPanel>
+      </Button>
+
+      <Border Height="1" Margin="10,2" Background="{DynamicResource HairlineBrush}"
+              IsVisible="{Binding ShowRailDivider}" />
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsHandTool, FallbackValue=False}"
+              ToolTip.Tip="Hand tool: drag to scroll, drag on text to select">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Hand">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <Button.Flyout>
+          <MenuFlyout Placement="RightEdgeAlignedTop">
+            <MenuItem Header="Hand tool" Command="{Binding ActiveDocument.UseHandToolCommand}" />
+            <Separator />
+            <MenuItem Header="Hand cursor" IsEnabled="False" />
+            <MenuItem Header="Open palm, fist while dragging"
+                      Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="PalmAndFist">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                          IsVisible="{Binding ActiveDocument.IsPalmAndFistCursor, FallbackValue=False}" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Open palm"
+                      Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="Palm">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                          IsVisible="{Binding ActiveDocument.IsPalmCursor, FallbackValue=False}" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Move arrows"
+                      Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="MoveArrows">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                          IsVisible="{Binding ActiveDocument.IsMoveArrowsCursor, FallbackValue=False}" />
+              </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Pointing finger"
+                      Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="PointingFinger">
+              <MenuItem.Icon>
+                <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                          IsVisible="{Binding ActiveDocument.IsPointingFingerCursor, FallbackValue=False}" />
+              </MenuItem.Icon>
+            </MenuItem>
+          </MenuFlyout>
+        </Button.Flyout>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource HandIcon}" />
+          <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+            <TextBlock Text="Hand" />
+            <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+          </StackPanel>
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsSelectTool, FallbackValue=False}"
+              ToolTip.Tip="Select tool">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Select">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <Button.Flyout>
+          <MenuFlyout Placement="RightEdgeAlignedTop">
+            <MenuItem Header="Select text" Command="{Binding ActiveDocument.UseSelectToolCommand}" />
+            <MenuItem Header="Select annotation" Command="{Binding ActiveDocument.UseSelectAnnotationToolCommand}" />
+          </MenuFlyout>
+        </Button.Flyout>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource SelectIcon}" />
+          <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+            <TextBlock Text="Select" />
+            <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+          </StackPanel>
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Command="{Binding ActiveDocument.ComingSoonCommand}" CommandParameter="Snapshot"
+              ToolTip.Tip="Snapshot (coming soon)">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Snapshot">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource SnapshotIcon}" />
+          <TextBlock Text="SnapShot" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" ToolTip.Tip="Clipboard">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Clipboard">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <Button.Flyout>
+          <MenuFlyout Placement="RightEdgeAlignedTop">
+            <MenuItem Header="Copy" InputGesture="Ctrl+C" Command="{Binding ActiveDocument.CopySelectionCommand}" />
+            <MenuItem Header="Paste" InputGesture="Ctrl+V" Command="{Binding PasteCommand}" />
+            <MenuItem Header="Paste in place" InputGesture="Ctrl+Alt+V" Command="{Binding PasteInPlaceCommand}" />
+          </MenuFlyout>
+        </Button.Flyout>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource ClipboardIcon}" />
+          <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+            <TextBlock Text="Clipboard" />
+            <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+          </StackPanel>
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" ToolTip.Tip="Zoom">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Zoom">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <Button.Flyout>
+          <MenuFlyout Placement="RightEdgeAlignedTop">
+            <MenuItem Header="Zoom in" InputGesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
+            <MenuItem Header="Zoom out" InputGesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
+            <Separator />
+            <MenuItem Header="50%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="50" />
+            <MenuItem Header="75%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="75" />
+            <MenuItem Header="100%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="100" />
+            <MenuItem Header="125%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="125" />
+            <MenuItem Header="150%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="150" />
+            <MenuItem Header="200%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="200" />
+            <MenuItem Header="400%" Command="{Binding ActiveDocument.SetZoomCommand}" CommandParameter="400" />
+          </MenuFlyout>
+        </Button.Flyout>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource ZoomIcon}" />
+          <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+            <TextBlock Text="Zoom" />
+            <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+          </StackPanel>
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" ToolTip.Tip="Page fit options">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="PageFit">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <Button.Flyout>
+          <MenuFlyout Placement="RightEdgeAlignedTop">
+            <MenuItem Header="Fit width" Command="{Binding FitWidthCommand}" />
+            <MenuItem Header="Fit page" Command="{Binding FitPageCommand}" />
+            <MenuItem Header="Actual size" Command="{Binding ActualSizeCommand}" />
+          </MenuFlyout>
+        </Button.Flyout>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource PageFitIcon}" />
+          <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+            <TextBlock Text="Page Fit" />
+            <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+          </StackPanel>
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Command="{Binding FindCommand}" ToolTip.Tip="Find (Ctrl+F)">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Find">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource SearchIcon}" />
+          <TextBlock Text="Find" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Command="{Binding ActiveDocument.UndoCommand}" ToolTip.Tip="Undo (Ctrl+Z)">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Undo">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource UndoIcon}" />
+          <TextBlock Text="Undo" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Command="{Binding ActiveDocument.RedoCommand}" ToolTip.Tip="Redo (Ctrl+Y)">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Redo">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource RedoIcon}" />
+          <TextBlock Text="Redo" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsHighlightTool, FallbackValue=False}"
+              Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Highlight}"
+              ToolTip.Tip="Highlight">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Highlight">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource HighlightIcon}" Foreground="{Binding ActiveDocument.HighlightToolBrush}" />
+          <TextBlock Text="Highlight" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsUnderlineTool, FallbackValue=False}"
+              Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Underline}"
+              ToolTip.Tip="Underline">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Underline">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource UnderlineIcon}" />
+          <TextBlock Text="Underline" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsStrikeOutTool, FallbackValue=False}"
+              Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.StrikeOut}"
+              ToolTip.Tip="Strikeout">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="StrikeOut">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource StrikethroughIcon}" />
+          <TextBlock Text="Strikeout" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsSquigglyTool, FallbackValue=False}"
+              Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Squiggly}"
+              ToolTip.Tip="Squiggly underline">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Squiggly">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource SquigglyIcon}" />
+          <TextBlock Text="Squiggly" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsNoteTool, FallbackValue=False}"
+              Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Note}"
+              ToolTip.Tip="Note">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Note">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource CommentIcon}" />
+          <TextBlock Text="Note" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsTypewriterTool, FallbackValue=False}"
+              Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Typewriter}"
+              ToolTip.Tip="Typewriter">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Typewriter">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource TypewriterIcon}" />
+          <TextBlock Text="Typewriter" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsTextboxTool, FallbackValue=False}"
+              Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Textbox}"
+              ToolTip.Tip="Text box">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Textbox">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource TextBoxIcon}" />
+          <TextBlock Text="Text box" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsCalloutTool, FallbackValue=False}"
+              Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
+              CommandParameter="{x:Static models:AnnotationTool.Callout}"
+              ToolTip.Tip="Callout">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Callout">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource CalloutIcon}" />
+          <TextBlock Text="Callout" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.KeepToolSelected, FallbackValue=False}"
+              Command="{Binding ActiveDocument.ToggleKeepToolSelectedCommand}"
+              ToolTip.Tip="Keep tool selected">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="KeepTool">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource PinIcon}" />
+          <TextBlock Text="Keep tool" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsFormatPanelOpen, FallbackValue=False}"
+              Command="{Binding ActiveDocument.OpenFormatPanelCommand}"
+              ToolTip.Tip="Format">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Format">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource PaletteIcon}" />
+          <TextBlock Text="Format" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsRulerVisible, FallbackValue=False}"
+              Command="{Binding ToggleRulerCommand}"
+              ToolTip.Tip="Show or hide the ruler (Ctrl+R)">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Ruler">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource RulerIcon}" />
+          <TextBlock Text="Ruler" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding IsReadMode}"
+              Command="{Binding ToggleReadModeCommand}"
+              ToolTip.Tip="Read Mode (Ctrl+H)">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="ReadMode">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource ReadModeIcon}" />
+          <TextBlock Text="Read mode" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Classes.active="{Binding IsFullScreen}"
+              Command="{Binding ToggleFullScreenCommand}"
+              ToolTip.Tip="Full Screen (F11)">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="FullScreen">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource FullscreenIcon}" />
+          <TextBlock Text="Full screen" />
+        </StackPanel>
+      </Button>
+
+      <Button Classes="nav" Command="{Binding RotateClockwiseCommand}"
+              ToolTip.Tip="Rotate right (Ctrl+Shift+Plus)">
+        <Button.IsVisible>
+          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Rotate">
+            <Binding Path="PinEpoch" />
+            <Binding Path="HasActiveDocument" />
+          </MultiBinding>
+        </Button.IsVisible>
+        <StackPanel Spacing="2">
+          <PathIcon Data="{StaticResource RotatePageIcon}" />
+          <TextBlock Text="Rotate" />
+        </StackPanel>
+      </Button>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

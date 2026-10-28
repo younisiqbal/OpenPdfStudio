@@ -107,10 +107,10 @@
         <MenuItem Header="Rea_d Mode" InputGesture="Ctrl+H" Command="{Binding ToggleReadModeCommand}" />
         <MenuItem Header="_Full Screen" InputGesture="F11" Command="{Binding ToggleFullScreenCommand}" />
         <Separator />
-        <MenuItem Header="_Comment toolbar" Command="{Binding ActiveDocument.ToggleCommentToolbarCommand, FallbackValue={x:Null}}">
+        <MenuItem Header="_Comment" Command="{Binding SelectRibbonTabCommand}" CommandParameter="Comment">
           <MenuItem.Icon>
             <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                      IsVisible="{Binding ActiveDocument.IsCommentToolbarVisible, FallbackValue=False}" />
+                      IsVisible="{Binding IsCommentTab}" />
           </MenuItem.Icon>
         </MenuItem>
         <MenuItem Header="_Ruler" InputGesture="Ctrl+R" Command="{Binding ToggleRulerCommand}">
@@ -204,6 +204,8 @@
       </DockPanel>
     </Border>
 
+    <views:RibbonBar DockPanel.Dock="Top" IsVisible="{Binding ShowRibbon}" />
+
     <Border DockPanel.Dock="Left"
             IsVisible="{Binding IsChromeVisible}"
             Background="{DynamicResource SystemChromeLowColor}"
@@ -277,56 +279,40 @@
           </StackPanel>
         </Button>
 
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
-        <StackPanel Spacing="2">
-          <Button Classes="nav" Classes.active="{Binding IsHomeActive}" ToolTip.Tip="Home"
-                  Command="{Binding ShowHomeCommand}">
-            <StackPanel Spacing="2">
-              <PathIcon Data="{StaticResource HomeIcon}" />
-              <TextBlock Text="Home" FontSize="11" HorizontalAlignment="Center" />
-            </StackPanel>
-          </Button>
-          <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsThumbnailsVisible, FallbackValue=False}"
-                  Command="{Binding ActiveDocument.ToggleThumbnailsCommand, FallbackValue={x:Null}}"
-                  IsVisible="{Binding HasActiveDocument}"
-                  ToolTip.Tip="Show or hide page thumbnails">
-            <StackPanel Spacing="2">
-              <PathIcon Data="{StaticResource OutlineIcon}" />
-              <TextBlock Text="Pages" FontSize="11" HorizontalAlignment="Center" />
-            </StackPanel>
-          </Button>
-          <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsCommentToolbarVisible, FallbackValue=False}"
-                  Command="{Binding ActiveDocument.ToggleCommentToolbarCommand, FallbackValue={x:Null}}"
-                  IsVisible="{Binding HasActiveDocument}"
-                  ToolTip.Tip="Show or hide comment tools">
-            <StackPanel Spacing="2">
-              <PathIcon Data="{StaticResource CommentIcon}" />
-              <TextBlock Text="Comment" FontSize="11" HorizontalAlignment="Center" />
-            </StackPanel>
-          </Button>
-          <Button Classes="nav" ToolTip.Tip="Recent files" Command="{Binding ShowHomeCommand}">
-            <StackPanel Spacing="2">
-              <PathIcon Data="{StaticResource RecentIcon}" />
-              <TextBlock Text="Recent" FontSize="11" HorizontalAlignment="Center" />
-            </StackPanel>
-          </Button>
-          <Button Classes="nav" ToolTip.Tip="Starred files" Command="{Binding ShowHomeCommand}">
-            <StackPanel Spacing="2">
-              <PathIcon Data="{StaticResource StarIcon}" />
-              <TextBlock Text="Starred" FontSize="11" HorizontalAlignment="Center" />
-            </StackPanel>
-          </Button>
-          <Button Classes="nav" IsEnabled="False" ToolTip.Tip="Settings — coming soon">
-            <StackPanel Spacing="2">
-              <PathIcon Data="{StaticResource SettingsIcon}" />
-              <TextBlock Text="Settings" FontSize="11" HorizontalAlignment="Center" />
-            </StackPanel>
-          </Button>
+        <Button DockPanel.Dock="Bottom" Classes="nav" ToolTip.Tip="Add or remove rail items">
+          <Button.Flyout>
+            <Flyout Placement="RightEdgeAlignedBottom">
+              <Border Padding="8,6" MinWidth="220" MaxHeight="440">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                  <ItemsControl ItemsSource="{Binding RailGroups}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:RailPinGroup">
+                        <StackPanel Margin="0,6,0,2">
+                          <TextBlock Text="{Binding Title}" FontSize="11" Opacity="0.55"
+                                     FontWeight="SemiBold" Margin="8,0,8,4" />
+                          <ItemsControl ItemsSource="{Binding Items}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:RailPinItem">
+                                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsPinned}"
+                                          Margin="8,2" />
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Border>
+            </Flyout>
+          </Button.Flyout>
+          <StackPanel Spacing="2">
+            <PathIcon Data="{StaticResource PlusIcon}" />
+            <TextBlock Text="Add" FontSize="11" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Button>
 
-          <views:ViewerTopBar DataContext="{Binding ActiveDocument}"
-                              IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).HasActiveDocument}" />
-        </StackPanel>
-        </ScrollViewer>
+        <views:RailBar />
       </DockPanel>
     </Border>
 

@@ -30,7 +30,6 @@
 
   <DockPanel>
     <views:ViewerBottomBar DockPanel.Dock="Bottom" IsVisible="{Binding ShowBottomBar}" />
-    <views:CommentToolbar DockPanel.Dock="Top" IsVisible="{Binding ShowCommentChrome}" />
     <Border DockPanel.Dock="Right" IsVisible="{Binding ShowFormatPanel}">
       <views:FormatPanel DataContext="{Binding Format}" />
     </Border>

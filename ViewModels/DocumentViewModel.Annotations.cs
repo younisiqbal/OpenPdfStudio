@@ -32,6 +32,9 @@ public partial class DocumentViewModel
     /// <summary>Raised when the markup mini bar should open. Null means hide it.</summary>
     public event Action<AnnotationViewModel?>? MarkupChromeRequested;
 
+    /// <summary>Raised when the comment ribbon tab should open.</summary>
+    public event Action? CommentRibbonRequested;
+
     public FormatPanelViewModel Format { get; private set; } = null!;
     public IReadOnlyList<AnnotationViewModel> SelectedAnnotations => _selected;
     public AnnotationViewModel? PrimarySelection => _selected.Count > 0 ? _selected[^1] : null;
@@ -128,8 +131,8 @@ public partial class DocumentViewModel
             return;
         }
 
-        ViewerPreferences.ShowCommentToolbar = true;
         AnnotationTool = tool;
+        CommentRibbonRequested?.Invoke();
         ClearSelection();
         ClearAnnotationSelection();
         Format.Sync();
@@ -377,7 +380,7 @@ public partial class DocumentViewModel
                 AnnotationKind.Squiggly => AnnotationTool.Squiggly,
                 _ => AnnotationTool.Highlight
             };
-            ViewerPreferences.ShowCommentToolbar = true;
+            CommentRibbonRequested?.Invoke();
             Format.Sync();
             _setStatus("Drag across the text to mark it");
             return;

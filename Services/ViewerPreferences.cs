@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using OpenPdfStudio.Models;
 
@@ -18,12 +19,16 @@ public static class ViewerPreferences
     private static readonly string CommentToolbarFilePath = Path.Combine(SettingsDirectory, "comment-toolbar.txt");
     private static readonly string KeepToolFilePath = Path.Combine(SettingsDirectory, "keep-tool-selected.txt");
     private static readonly string AnnotationStylesFilePath = Path.Combine(SettingsDirectory, "annotation-styles.json");
+    private static readonly string RailPinsFilePath = Path.Combine(SettingsDirectory, "rail-pins.json");
+    private static readonly string RibbonCollapsedFilePath = Path.Combine(SettingsDirectory, "ribbon-collapsed.txt");
 
     private static HandCursorStyle? _handCursorStyle;
     private static (bool Show, RulerUnit Unit)? _ruler;
     private static bool? _showCommentToolbar;
     private static bool? _keepToolSelected;
     private static Dictionary<string, AnnotationStyleData>? _annotationStyles;
+    private static HashSet<string>? _railPins;
+    private static bool? _ribbonCollapsed;
 
     public static event Action? Changed;
 
@@ -76,6 +81,58 @@ public static class ViewerPreferences
             _showCommentToolbar = value;
             Save(CommentToolbarFilePath, value.ToString());
             Changed?.Invoke();
+        }
+    }
+
+    public static bool RibbonCollapsed
+    {
+        get => _ribbonCollapsed ??= LoadBool(RibbonCollapsedFilePath, false);
+        set
+        {
+            if (_ribbonCollapsed == value)
+                return;
+
+            _ribbonCollapsed = value;
+            Save(RibbonCollapsedFilePath, value.ToString());
+            Changed?.Invoke();
+        }
+    }
+
+    public static bool IsPinned(string id) => RailPins.Contains(id);
+
+    public static void SetPinned(string id, bool pinned)
+    {
+        if (!RailCatalog.TryGet(id, out _))
+            return;
+
+        var next = new HashSet<string>(RailPins, StringComparer.Ordinal);
+        if (!(pinned ? next.Add(id) : next.Remove(id)))
+            return;
+
+        _railPins = next;
+        Save(RailPinsFilePath, JsonSerializer.Serialize(next.OrderBy(x => x, StringComparer.Ordinal).ToArray()));
+        Changed?.Invoke();
+    }
+
+    private static HashSet<string> RailPins => _railPins ??= LoadRailPins();
+
+    private static HashSet<string> LoadRailPins()
+    {
+        var json = string.Join('\n', ReadLines(RailPinsFilePath));
+        if (string.IsNullOrWhiteSpace(json))
+            return new HashSet<string>(RailCatalog.DefaultPins, StringComparer.Ordinal);
+
+        try
+        {
+            var saved = JsonSerializer.Deserialize<string[]>(json);
+            if (saved is null)
+                return new HashSet<string>(RailCatalog.DefaultPins, StringComparer.Ordinal);
+
+            return new HashSet<string>(saved.Where(id => RailCatalog.TryGet(id, out _)), StringComparer.Ordinal);
+        }
+        catch (JsonException)
+        {
+            return new HashSet<string>(RailCatalog.DefaultPins, StringComparer.Ordinal);
         }
     }
 
