@@ -23,6 +23,9 @@
       <Button Classes="icon" Command="{Binding MarkupSelectionCommand}" CommandParameter="Underline" ToolTip.Tip="Underline">
         <PathIcon Data="{StaticResource UnderlineIcon}" />
       </Button>
+      <Button Classes="icon" Command="{Binding MarkupSelectionCommand}" CommandParameter="Squiggly" ToolTip.Tip="Squiggly underline">
+        <PathIcon Data="{StaticResource SquigglyIcon}" />
+      </Button>
       <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Bookmark" ToolTip.Tip="Bookmark (coming soon)">
         <PathIcon Data="{StaticResource BookmarkIcon}" />
       </Button>

@@ -1,38 +1,68 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="OpenPdfStudio.Views.NotePopup"
-             Width="240">
-  <Border Background="#FFFCE98A"
-          BorderBrush="#D6C24A"
-          BorderThickness="1"
-          CornerRadius="2"
-          BoxShadow="0 2 10 0 #40000000">
-    <DockPanel>
-      <Border DockPanel.Dock="Top" Background="#F5E56A" Padding="8,6">
+             Width="252" Height="168"
+             MinWidth="180" MinHeight="120">
+  <Grid>
+    <Path x:Name="LeftPointer"
+          Data="M12,0 L0,12 L12,24 Z"
+          Fill="#FFFCE98A" Stroke="#D6C24A" StrokeThickness="1"
+          Width="12" Height="24"
+          HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,18,0,0" />
+    <Path x:Name="RightPointer"
+          Data="M0,0 L12,12 L0,24 Z"
+          Fill="#FFFCE98A" Stroke="#D6C24A" StrokeThickness="1"
+          Width="12" Height="24"
+          HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,0,0"
+          IsVisible="False" />
+    <Border x:Name="Card"
+            Margin="11,0,0,0"
+            Background="#FFFCE98A"
+            BorderBrush="#D6C24A"
+            BorderThickness="1"
+            CornerRadius="2"
+            BoxShadow="0 2 10 0 #40000000">
+      <Grid>
         <DockPanel>
-          <Button x:Name="CloseButton" DockPanel.Dock="Right" Classes="icon" Padding="2"
-                  ToolTip.Tip="Close">
-            <PathIcon Data="{StaticResource CloseIcon}" Width="10" Height="10" Foreground="#333" />
-          </Button>
-          <TextBlock x:Name="TitleText" FontSize="12" FontWeight="SemiBold" Foreground="#333"
-                     VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+          <Border x:Name="Header" DockPanel.Dock="Top" Background="#F5E56A" Padding="8,5"
+                  Cursor="SizeAll">
+            <DockPanel>
+              <Button x:Name="CloseButton" DockPanel.Dock="Right" Classes="icon" Padding="2"
+                      ToolTip.Tip="Close">
+                <PathIcon Data="{StaticResource CloseIcon}" Width="10" Height="10" Foreground="#333" />
+              </Button>
+              <TextBlock x:Name="TitleText" FontSize="12" FontWeight="SemiBold" Foreground="#333"
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+          </Border>
+          <Panel>
+            <DockPanel Margin="8,6,8,14">
+              <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                <Button x:Name="OptionsButton" DockPanel.Dock="Right" Classes="icon" Padding="2"
+                        FontSize="11" Foreground="#333" Content="Options ▾" />
+                <TextBlock x:Name="AuthorText" FontSize="11" Foreground="#333" VerticalAlignment="Center" />
+              </DockPanel>
+              <Border Background="#F7F7F7" BorderBrush="#E0D070" BorderThickness="1" CornerRadius="1">
+                <TextBox x:Name="Editor"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         Foreground="#222"
+                         CaretBrush="#222"
+                         MinHeight="72" />
+              </Border>
+            </DockPanel>
+            <Path x:Name="ResizeGrip"
+                  Data="M0,8 L8,8 L8,0 Z"
+                  Fill="#C8B84A"
+                  Width="8" Height="8"
+                  HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                  Margin="0,0,2,2"
+                  Cursor="BottomRightCorner" />
+          </Panel>
         </DockPanel>
-      </Border>
-      <DockPanel Margin="8,6">
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
-          <TextBlock x:Name="AuthorText" FontSize="11" Foreground="#333" />
-          <Button x:Name="OptionsButton" Classes="icon" Padding="2" FontSize="11" Foreground="#333"
-                  Content="Options ▾" />
-        </StackPanel>
-        <TextBox x:Name="Editor"
-                 AcceptsReturn="True"
-                 TextWrapping="Wrap"
-                 MinHeight="90"
-                 BorderThickness="0"
-                 Background="Transparent"
-                 Foreground="#222"
-                 CaretBrush="#222" />
-      </DockPanel>
-    </DockPanel>
-  </Border>
+      </Grid>
+    </Border>
+  </Grid>
 </UserControl>

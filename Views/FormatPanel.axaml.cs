@@ -13,6 +13,21 @@ public partial class FormatPanel : UserControl
     {
         InitializeComponent();
         DataContextChanged += (_, _) => Bind();
+        FontCombo.SelectionChanged += (_, _) =>
+        {
+            if (DataContext is FormatPanelViewModel vm && FontCombo.SelectedItem is AnnotationFont font)
+                vm.SetFontCommand.Execute(font);
+        };
+        SizeCombo.SelectionChanged += (_, _) =>
+        {
+            if (DataContext is FormatPanelViewModel vm && SizeCombo.SelectedItem is double size)
+                vm.SetFontSizeCommand.Execute(size);
+        };
+        SpacingCombo.SelectionChanged += (_, _) =>
+        {
+            if (DataContext is FormatPanelViewModel vm && SpacingCombo.SelectedItem is double spacing)
+                vm.SetLineSpacingCommand.Execute(spacing);
+        };
     }
 
     private void Bind()
@@ -22,6 +37,7 @@ public partial class FormatPanel : UserControl
 
         Fill(NoteColorGrid, vm.Swatches, vm.SetNoteColorCommand);
         Fill(TextColorGrid, vm.Swatches, vm.SetTextColorCommand);
+        Fill(MarkupColorGrid, vm.Swatches, vm.SetNoteColorCommand);
         Fill(BorderColorGrid, vm.Swatches, vm.SetBorderColorCommand);
         Fill(FillColorGrid, vm.Swatches, vm.SetFillColorCommand);
         FillIcons(vm);

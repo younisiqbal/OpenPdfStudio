@@ -101,6 +101,8 @@ public sealed record PdfAnnotation
     public required Rect Bounds { get; init; }
     public IReadOnlyList<Rect> Quads { get; init; } = [];
     public Point? CalloutTarget { get; init; }
+    /// <summary>Sticky-note pellet on the page, in PDF points. Null keeps it parked to the right of the icon.</summary>
+    public Rect? PopupBounds { get; init; }
     public string Contents { get; init; } = string.Empty;
     public string Author { get; init; } = string.Empty;
     public DateTimeOffset Modified { get; init; } = DateTimeOffset.Now;

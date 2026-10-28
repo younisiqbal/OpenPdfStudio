@@ -102,6 +102,7 @@ public static class ViewerPreferences
     {
         AnnotationStyles[kind.ToString()] = AnnotationStyleData.From(style);
         Save(AnnotationStylesFilePath, JsonSerializer.Serialize(AnnotationStyles));
+        Changed?.Invoke();
     }
 
     private static Dictionary<string, AnnotationStyleData> AnnotationStyles => _annotationStyles ??= LoadAnnotationStyles();

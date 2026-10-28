@@ -217,6 +217,7 @@ public sealed partial class PdfDocumentSession
                 Kind = data.Kind,
                 Bounds = data.Box ?? annotation.Bounds,
                 CalloutTarget = data.Target,
+                PopupBounds = data.Popup,
                 Style = data.Style
             };
         }
@@ -534,6 +535,7 @@ public sealed partial class PdfDocumentSession
         public string Kind { get; set; } = string.Empty;
         public double[]? Box { get; set; }
         public double[]? Target { get; set; }
+        public double[]? Popup { get; set; }
         public AnnotationStyleData Style { get; set; } = new();
 
         public static string Serialize(PdfAnnotation annotation) => JsonSerializer.Serialize(new AnnotationData
@@ -541,10 +543,11 @@ public sealed partial class PdfDocumentSession
             Kind = annotation.Kind.ToString(),
             Box = [annotation.Bounds.X, annotation.Bounds.Y, annotation.Bounds.Width, annotation.Bounds.Height],
             Target = annotation.CalloutTarget is { } t ? [t.X, t.Y] : null,
+            Popup = annotation.PopupBounds is { } p ? [p.X, p.Y, p.Width, p.Height] : null,
             Style = AnnotationStyleData.From(annotation.Style)
         });
 
-        public static (AnnotationKind Kind, Rect? Box, Point? Target, AnnotationStyle Style)? TryParse(string json)
+        public static (AnnotationKind Kind, Rect? Box, Point? Target, Rect? Popup, AnnotationStyle Style)? TryParse(string json)
         {
             if (string.IsNullOrWhiteSpace(json))
                 return null;
@@ -557,7 +560,8 @@ public sealed partial class PdfDocumentSession
 
                 Rect? box = data.Box is { Length: 4 } b ? new Rect(b[0], b[1], b[2], b[3]) : null;
                 Point? target = data.Target is { Length: 2 } p ? new Point(p[0], p[1]) : null;
-                return (kind, box, target, data.Style.ToStyle());
+                Rect? popup = data.Popup is { Length: 4 } pop ? new Rect(pop[0], pop[1], pop[2], pop[3]) : null;
+                return (kind, box, target, popup, data.Style.ToStyle());
             }
             catch (JsonException)
             {

@@ -13,7 +13,7 @@
               Command="{Binding UseAnnotationToolCommand}"
               CommandParameter="{x:Static models:AnnotationTool.Highlight}"
               ToolTip.Tip="Highlight">
-        <PathIcon Data="{StaticResource HighlightIcon}" />
+        <PathIcon Data="{StaticResource HighlightIcon}" Foreground="{Binding HighlightToolBrush}" />
       </Button>
       <Button Classes="icon" Classes.active="{Binding IsUnderlineTool}"
               Command="{Binding UseAnnotationToolCommand}"

@@ -237,6 +237,8 @@
         <views:SelectionPopup x:Name="SelectionPopupHost" IsVisible="False" />
         <views:AnnotationEditor x:Name="AnnotationEditorHost" IsVisible="False" />
         <views:NotePopup x:Name="NotePopupHost" IsVisible="False" />
+        <views:NoteMiniBar x:Name="NoteMiniBarHost" IsVisible="False" />
+        <views:MarkupMiniBar x:Name="MarkupMiniBarHost" IsVisible="False" />
       </Canvas>
 
       <views:FindBar x:Name="FindBarHost"

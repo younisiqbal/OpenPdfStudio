@@ -51,9 +51,16 @@
             <Slider Minimum="0" Maximum="1" Value="{Binding Opacity}" TickFrequency="0.05" />
           </StackPanel>
 
+          <StackPanel Spacing="6" IsVisible="{Binding ShowMarkupStyle}">
+            <TextBlock Text="Markup Style" FontWeight="SemiBold" FontSize="12" />
+            <UniformGrid x:Name="MarkupColorGrid" Columns="8" />
+            <TextBlock Text="Opacity" FontSize="11" Opacity="0.75" />
+            <Slider Minimum="0" Maximum="1" Value="{Binding Opacity}" TickFrequency="0.05" />
+          </StackPanel>
+
           <StackPanel Spacing="6" IsVisible="{Binding ShowTextStyle}">
             <TextBlock Text="Text Style" FontWeight="SemiBold" FontSize="12" />
-            <ComboBox ItemsSource="{Binding Fonts}" SelectedItem="{Binding Font}" HorizontalAlignment="Stretch">
+            <ComboBox x:Name="FontCombo" ItemsSource="{Binding Fonts}" SelectedItem="{Binding Font}" HorizontalAlignment="Stretch">
               <ComboBox.ItemTemplate>
                 <DataTemplate x:DataType="models:AnnotationFont">
                   <TextBlock Text="{Binding}" />
@@ -61,7 +68,7 @@
               </ComboBox.ItemTemplate>
             </ComboBox>
             <DockPanel>
-              <ComboBox DockPanel.Dock="Right" Width="72" ItemsSource="{Binding Sizes}" SelectedItem="{Binding FontSize}" />
+              <ComboBox x:Name="SizeCombo" DockPanel.Dock="Right" Width="72" ItemsSource="{Binding Sizes}" SelectedItem="{Binding FontSize}" />
               <UniformGrid x:Name="TextColorGrid" Columns="8" />
             </DockPanel>
             <StackPanel Orientation="Horizontal" Spacing="2">
@@ -93,7 +100,7 @@
             </StackPanel>
             <DockPanel>
               <TextBlock Text="Line spacing" FontSize="11" Opacity="0.75" VerticalAlignment="Center" />
-              <ComboBox HorizontalAlignment="Right" Width="80" ItemsSource="{Binding Spacings}" SelectedItem="{Binding LineSpacing}" />
+              <ComboBox x:Name="SpacingCombo" HorizontalAlignment="Right" Width="80" ItemsSource="{Binding Spacings}" SelectedItem="{Binding LineSpacing}" />
             </DockPanel>
           </StackPanel>
 

@@ -26,8 +26,11 @@ public partial class DocumentViewModel
     /// <summary>Raised when an in-place text editor should open on a FreeText annotation.</summary>
     public event Action<AnnotationViewModel>? TextEditRequested;
 
-    /// <summary>Raised when the sticky-note popup should open.</summary>
-    public event Action<AnnotationViewModel>? NotePopupRequested;
+    /// <summary>Raised when the sticky-note pellet should open. Null means hide it.</summary>
+    public event Action<AnnotationViewModel?>? NotePopupRequested;
+
+    /// <summary>Raised when the markup mini bar should open. Null means hide it.</summary>
+    public event Action<AnnotationViewModel?>? MarkupChromeRequested;
 
     public FormatPanelViewModel Format { get; private set; } = null!;
     public IReadOnlyList<AnnotationViewModel> SelectedAnnotations => _selected;
@@ -95,10 +98,17 @@ public partial class DocumentViewModel
         ViewerPreferences.KeepToolSelected = !ViewerPreferences.KeepToolSelected;
 
     [RelayCommand]
-    private void OpenFormatPanel() => IsFormatPanelOpen = true;
+    private void OpenFormatPanel() => OpenFormat(FormatFocus.All);
 
     [RelayCommand]
     private void CloseFormatPanel() => IsFormatPanelOpen = false;
+
+    public void OpenFormat(FormatFocus focus)
+    {
+        Format.Focus = focus;
+        IsFormatPanelOpen = true;
+        Format.Sync();
+    }
 
     [RelayCommand]
     private void UseSelectAnnotationTool()
@@ -111,9 +121,15 @@ public partial class DocumentViewModel
     [RelayCommand]
     private async Task UseAnnotationTool(AnnotationTool tool)
     {
+        if (AnnotationTool == tool)
+        {
+            AnnotationTool = AnnotationTool.None;
+            Tool = ViewerTool.Hand;
+            return;
+        }
+
         ViewerPreferences.ShowCommentToolbar = true;
         AnnotationTool = tool;
-        IsFormatPanelOpen = true;
         ClearSelection();
         ClearAnnotationSelection();
         Format.Sync();
@@ -131,7 +147,8 @@ public partial class DocumentViewModel
 
     public void FinishAnnotationTool()
     {
-        if (!KeepToolSelected)
+        var oneShot = AnnotationTool is AnnotationTool.Note or AnnotationTool.Textbox;
+        if (oneShot || !KeepToolSelected)
             AnnotationTool = AnnotationTool.None;
     }
 
@@ -140,15 +157,40 @@ public partial class DocumentViewModel
         if (pageIndex < 0 || pageIndex >= Pages.Count)
             return null;
 
+        AnnotationViewModel? markup = null;
         foreach (var annotation in Pages[pageIndex].Annotations.Reverse())
         {
-            if (annotation.IsEditing)
+            if (annotation.IsEditing && annotation.Kind != AnnotationKind.Note)
                 continue;
-            if (HitBounds(annotation.Model, point))
+            if (!HitBounds(annotation.Model, point))
+                continue;
+            if (!annotation.Model.IsMarkup)
                 return annotation;
+            markup ??= annotation;
         }
 
-        return null;
+        return markup;
+    }
+
+    public async Task ChangeMarkupKindAsync(AnnotationViewModel annotation, AnnotationKind kind)
+    {
+        if (!annotation.Model.IsMarkup ||
+            kind is not (AnnotationKind.Highlight or AnnotationKind.Underline or AnnotationKind.StrikeOut or AnnotationKind.Squiggly) ||
+            annotation.Kind == kind)
+            return;
+
+        var before = annotation.Model;
+        var after = before with { Kind = kind, Modified = DateTimeOffset.Now };
+        try
+        {
+            var saved = await RewriteKindAsync(annotation, after);
+            PushHistory([new AnnotationChange(before, saved)], saved.Id);
+            MarkupChromeRequested?.Invoke(annotation);
+        }
+        catch (Exception)
+        {
+            _setStatus("Could not change the markup");
+        }
     }
 
     public static bool HitBounds(PdfAnnotation annotation, Point point)
@@ -203,7 +245,7 @@ public partial class DocumentViewModel
     public void SelectAnnotation(AnnotationViewModel annotation, bool add)
     {
         if (!add)
-            ClearAnnotationSelection();
+            ResetAnnotationSelection();
 
         if (!_selected.Contains(annotation))
         {
@@ -212,17 +254,28 @@ public partial class DocumentViewModel
         }
 
         HasSelectedAnnotation = _selected.Count > 0;
-        IsFormatPanelOpen = true;
         Format.Sync();
+        if (!add)
+        {
+            NotePopupRequested?.Invoke(annotation.Kind == AnnotationKind.Note ? annotation : null);
+            MarkupChromeRequested?.Invoke(annotation.Model.IsMarkup ? annotation : null);
+        }
     }
 
     public void ClearAnnotationSelection()
     {
+        ResetAnnotationSelection();
+        HasSelectedAnnotation = false;
+        Format.Sync();
+        NotePopupRequested?.Invoke(null);
+        MarkupChromeRequested?.Invoke(null);
+    }
+
+    private void ResetAnnotationSelection()
+    {
         foreach (var annotation in _selected)
             annotation.IsSelected = false;
         _selected.Clear();
-        HasSelectedAnnotation = false;
-        Format.Sync();
     }
 
     public async Task EnsureAnnotationsAsync(PdfPageViewModel page)
@@ -255,7 +308,10 @@ public partial class DocumentViewModel
             var view = new AnnotationViewModel(saved) { IsNew = beginEdit };
             Pages[saved.PageIndex].Annotations.Add(view);
             PushHistory([new AnnotationChange(null, saved)], saved.Id);
-            SelectAnnotation(view, add: false);
+            if (saved.IsMarkup)
+                ClearAnnotationSelection();
+            else
+                SelectAnnotation(view, add: false);
             RefreshPage(Pages[saved.PageIndex]);
             _setStatus($"{saved.Kind.DisplayName()} added");
             if (beginEdit)
@@ -322,7 +378,6 @@ public partial class DocumentViewModel
                 _ => AnnotationTool.Highlight
             };
             ViewerPreferences.ShowCommentToolbar = true;
-            IsFormatPanelOpen = true;
             Format.Sync();
             _setStatus("Drag across the text to mark it");
             return;
@@ -346,6 +401,12 @@ public partial class DocumentViewModel
 
     public async Task BeginEditAsync(AnnotationViewModel annotation)
     {
+        if (annotation.Kind == AnnotationKind.Note)
+        {
+            SelectAnnotation(annotation, add: false);
+            return;
+        }
+
         if (annotation.IsEditing)
             return;
 
@@ -362,10 +423,47 @@ public partial class DocumentViewModel
             return;
         }
 
-        if (annotation.Kind == AnnotationKind.Note)
-            NotePopupRequested?.Invoke(annotation);
-        else if (annotation.Model.IsFreeText)
+        if (annotation.Model.IsFreeText)
             TextEditRequested?.Invoke(annotation);
+    }
+
+    public async Task SaveNoteContentsAsync(AnnotationViewModel annotation, string contents)
+    {
+        if (annotation.Kind != AnnotationKind.Note)
+            return;
+
+        if (annotation.IsNew && string.IsNullOrWhiteSpace(contents))
+            return;
+
+        var before = annotation.Model;
+        if (before.Contents == contents)
+            return;
+
+        var after = before with { Contents = contents, Modified = DateTimeOffset.Now };
+        annotation.IsNew = false;
+        await WriteUpdateAsync(annotation, before, after, mergeKey: before.Id);
+    }
+
+    public async Task SetPopupBoundsAsync(AnnotationViewModel annotation, Rect bounds)
+    {
+        var before = annotation.Model;
+        if (before.PopupBounds == bounds)
+            return;
+
+        var after = before with { PopupBounds = bounds, Modified = DateTimeOffset.Now };
+        await WriteUpdateAsync(annotation, before, after, before.Id + ":popup", StyleMergeWindow);
+    }
+
+    public async Task CloseNoteAsync(AnnotationViewModel annotation, string contents)
+    {
+        if (annotation.IsNew && string.IsNullOrWhiteSpace(contents))
+        {
+            await RemoveAnnotationCoreAsync(annotation, record: true);
+            return;
+        }
+
+        await SaveNoteContentsAsync(annotation, contents);
+        annotation.IsNew = false;
     }
 
     public async Task CommitEditAsync(AnnotationViewModel annotation, string contents)
@@ -468,11 +566,37 @@ public partial class DocumentViewModel
         }
     }
 
-    public async Task PatchStyleAsync(Func<AnnotationStyle, AnnotationStyle> patch, string? mergeKey = null)
+    public async Task CopyMarkupTextAsync(AnnotationViewModel annotation)
     {
+        if (!annotation.Model.IsMarkup || SetClipboardTextAsync is null)
+            return;
+
+        try
+        {
+            var text = await _session.GetTextInRectsAsync(annotation.PageIndex, annotation.Model.Quads);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                _setStatus("No text in that markup");
+                return;
+            }
+
+            await SetClipboardTextAsync(text);
+            _setStatus($"Copied {text.Length} characters");
+        }
+        catch (Exception)
+        {
+            _setStatus("Could not copy the marked text");
+        }
+    }
+
+    public async Task PatchStyleAsync(Func<AnnotationStyle, AnnotationStyle> patch, string? mergeKey = null, AnnotationViewModel? target = null)
+    {
+        if (target is not null && !_selected.Contains(target))
+            SelectAnnotation(target, add: false);
+
         if (_selected.Count == 0)
         {
-            var kind = AnnotationTool.Kind();
+            var kind = AnnotationTool.Kind() ?? target?.Kind;
             if (kind is { } k)
             {
                 ViewerPreferences.SetAnnotationStyle(k, patch(ViewerPreferences.GetAnnotationStyle(k)));
@@ -495,6 +619,8 @@ public partial class DocumentViewModel
 
         var key = mergeKey is null ? null : mergeKey + ":" + string.Join(',', _selected.Select(a => a.Id));
         await CommitUpdatesAsync(changes, key, StyleMergeWindow);
+        if (_selected.Count == 1)
+            ViewerPreferences.SetAnnotationStyle(_selected[0].Kind, _selected[0].Model.Style);
         Format.Sync();
     }
 
@@ -608,16 +734,32 @@ public partial class DocumentViewModel
 
     private async Task RewriteAsync(PdfAnnotation annotation)
     {
+        if (FindAnnotation(annotation.Id) is { } existing && existing.Kind != annotation.Kind)
+        {
+            await RewriteKindAsync(existing, annotation);
+            return;
+        }
+
         var saved = await _session.UpdateAnnotationAsync(annotation);
         if (FindAnnotation(saved.Id) is { } view)
             view.Model = saved;
         RefreshPage(Pages[saved.PageIndex]);
     }
 
-    private async Task WriteUpdateAsync(AnnotationViewModel annotation, PdfAnnotation before, PdfAnnotation after, string? mergeKey = null)
+    private async Task<PdfAnnotation> RewriteKindAsync(AnnotationViewModel annotation, PdfAnnotation after)
+    {
+        await _session.RemoveAnnotationAsync(after.PageIndex, after.Id);
+        var saved = await _session.AddAnnotationAsync(after);
+        annotation.Model = saved;
+        RefreshPage(Pages[saved.PageIndex]);
+        return saved;
+    }
+
+    private async Task WriteUpdateAsync(AnnotationViewModel annotation, PdfAnnotation before, PdfAnnotation after, string? mergeKey = null, TimeSpan? mergeWindow = null)
     {
         annotation.Model = after;
-        await CommitUpdatesAsync([new AnnotationChange(before, after)], mergeKey, mergeKey is null ? null : NewAnnotationMergeWindow);
+        await CommitUpdatesAsync([new AnnotationChange(before, after)], mergeKey,
+            mergeWindow ?? (mergeKey is null ? null : NewAnnotationMergeWindow));
     }
 
     private async Task CommitUpdatesAsync(List<AnnotationChange> changes, string? mergeKey = null, TimeSpan? mergeWindow = null)

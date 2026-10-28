@@ -121,31 +121,26 @@ public class AnnotationOverlay : Control
         {
             foreach (var annotation in Annotations)
             {
-                if (annotation.IsEditing || !annotation.IsSelected)
+                if ((annotation.IsEditing && annotation.Kind != AnnotationKind.Note) || !annotation.IsSelected)
                     continue;
 
                 var model = annotation.Model;
                 if (model.IsMarkup)
-                {
-                    foreach (var quad in model.Quads)
-                        context.DrawRectangle(null, stroke, Scale(quad, scale));
-                }
-                else
-                {
-                    context.DrawRectangle(null, stroke, Scale(model.Bounds, scale));
-                    if (model.Kind is not AnnotationKind.Note)
-                    {
-                        foreach (var at in Handles(model.Bounds, scale))
-                            DrawHandle(context, at, handleFill, handleStroke);
-                    }
+                    continue;
 
-                    if (model.CalloutTarget is { } target)
-                    {
-                        var from = ScalePoint(AppearanceBuilderAnchor(model.Bounds, target), scale);
-                        var to = ScalePoint(target, scale);
-                        context.DrawLine(stroke, from, to);
-                        DrawHandle(context, to, handleFill, handleStroke);
-                    }
+                context.DrawRectangle(null, stroke, Scale(model.Bounds, scale));
+                if (model.Kind is not AnnotationKind.Note)
+                {
+                    foreach (var at in Handles(model.Bounds, scale))
+                        DrawHandle(context, at, handleFill, handleStroke);
+                }
+
+                if (model.CalloutTarget is { } target)
+                {
+                    var from = ScalePoint(AppearanceBuilderAnchor(model.Bounds, target), scale);
+                    var to = ScalePoint(target, scale);
+                    context.DrawLine(stroke, from, to);
+                    DrawHandle(context, to, handleFill, handleStroke);
                 }
             }
         }

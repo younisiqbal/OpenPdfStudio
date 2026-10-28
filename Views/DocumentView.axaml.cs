@@ -11,6 +11,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
@@ -30,7 +31,9 @@ public partial class DocumentView : UserControl
     private const double ArrowScrollStep = 60;
 
     private readonly DispatcherTimer _popupHideTimer;
+    private readonly DispatcherTimer _markupHideTimer;
     private DocumentViewModel? _vm;
+    private AnnotationViewModel? _markupBarAnnotation;
 
     private bool _isPanning;
     private Point _panStart;
@@ -41,6 +44,7 @@ public partial class DocumentView : UserControl
     private Point _lastPointer;
 
     private bool _overText;
+    private bool _overExistingAnnotation;
     private bool _hoverProbeRunning;
     private int _hoverGeneration;
     private (int PageIndex, Point Point)? _pendingHover;
@@ -75,6 +79,13 @@ public partial class DocumentView : UserControl
             if (!SelectionPopupHost.IsPointerOver)
                 HidePopup();
         };
+        _markupHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        _markupHideTimer.Tick += (_, _) =>
+        {
+            _markupHideTimer.Stop();
+            if (!MarkupMiniBarHost.IsPointerOver)
+                HideMarkupBarIfHoverOnly();
+        };
 
         PageScroller.ScrollChanged += OnScrollChanged;
         PageScroller.AddHandler(PointerPressedEvent, OnPagePointerPressed, RoutingStrategies.Tunnel);
@@ -84,7 +95,13 @@ public partial class DocumentView : UserControl
         PageScroller.PointerExited += (_, _) =>
         {
             ResetTextHover();
-            StartPopupHide();
+            if (!SelectionPopupHost.IsPointerOver)
+                StartPopupHide();
+            if (!MarkupMiniBarHost.IsPointerOver && !MarkupMiniBarHost.IsColorFlyoutOpen)
+            {
+                StartMarkupHide();
+                SetOverExistingAnnotation(false);
+            }
             UpdateRulerPointer(null);
         };
         PageScroller.AddHandler(PointerMovedEvent, (_, e) => UpdateRulerPointer(e.GetPosition(PageScroller)),
@@ -118,9 +135,47 @@ public partial class DocumentView : UserControl
             annotation.Model = annotation.Model with { Contents = AnnotationEditorHost.Text };
             PositionTextEditor(annotation);
         };
-        NotePopupHost.Committed += (annotation, text) => _ = FinishEdit(annotation, text, cancel: false);
-        NotePopupHost.Cancelled += annotation => _ = FinishEdit(annotation, null, cancel: true);
+        NotePopupHost.ContentsChanged += (annotation, text) => _ = _vm?.SaveNoteContentsAsync(annotation, text);
+        NotePopupHost.Closed += (annotation, text) => _ = CloseNotePellet(annotation, text);
+        NotePopupHost.Cancelled += annotation => _ = CancelNotePellet(annotation);
         NotePopupHost.DeleteRequested += annotation => _ = DeleteFromPopup(annotation);
+        NotePopupHost.EditorFocused += annotation => _vm?.OpenFormat(FormatFocus.Text);
+        NotePopupHost.Moved += annotation => PersistNotePopup(annotation);
+        NotePopupHost.Resized += annotation => PersistNotePopup(annotation);
+        NoteMiniBarHost.TogglePopup += ToggleNotePellet;
+        NoteMiniBarHost.ColorPicked += color =>
+        {
+            if (_vm is not null)
+                _ = _vm.PatchStyleAsync(style => style with { Color = color });
+        };
+        NoteMiniBarHost.SettingsClicked += () => _vm?.OpenFormat(FormatFocus.NoteStyle);
+        MarkupMiniBarHost.RemoveClicked += () => _ = RemoveMarkupFromBarAsync();
+        MarkupMiniBarHost.CopyClicked += () =>
+        {
+            if (_markupBarAnnotation is { } markup)
+                _ = _vm?.CopyMarkupTextAsync(markup);
+        };
+        MarkupMiniBarHost.CommentClicked += () =>
+        {
+            if (_markupBarAnnotation is { } markup)
+                _vm?.SelectAnnotation(markup, add: false);
+            _vm?.OpenFormat(FormatFocus.All);
+        };
+        MarkupMiniBarHost.ColorPicked += color =>
+        {
+            MarkupMiniBarHost.SetColor(color);
+            if (_vm is null || _markupBarAnnotation is not { } markup)
+                return;
+            _ = _vm.PatchStyleAsync(style => style with { Color = color }, target: markup);
+        };
+        MarkupMiniBarHost.PointerEntered += (_, _) => _markupHideTimer.Stop();
+        MarkupMiniBarHost.PointerExited += (_, _) => StartMarkupHide();
+        MarkupMiniBarHost.ColorFlyoutOpened += () => _markupHideTimer.Stop();
+        MarkupMiniBarHost.ColorFlyoutClosed += () =>
+        {
+            if (!MarkupMiniBarHost.IsPointerOver)
+                StartMarkupHide();
+        };
 
         DataContextChanged += OnDataContextChanged;
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
@@ -157,6 +212,7 @@ public partial class DocumentView : UserControl
             _vm.GetPasteAnchor = null;
             _vm.TextEditRequested -= OnTextEditRequested;
             _vm.NotePopupRequested -= OnNotePopupRequested;
+            _vm.MarkupChromeRequested -= OnMarkupChromeRequested;
             _vm.OnViewDetached();
         }
 
@@ -178,6 +234,7 @@ public partial class DocumentView : UserControl
         _vm.GetPasteAnchor = GetPasteAnchor;
         _vm.TextEditRequested += OnTextEditRequested;
         _vm.NotePopupRequested += OnNotePopupRequested;
+        _vm.MarkupChromeRequested += OnMarkupChromeRequested;
 
         if (TopLevel.GetTopLevel(this) is { } topLevel)
             _vm.RenderScaling = topLevel.RenderScaling;
@@ -200,6 +257,7 @@ public partial class DocumentView : UserControl
             case nameof(DocumentViewModel.ZoomPercent):
                 CaptureZoomAnchor();
                 HidePopup();
+                PositionOpenEditors();
                 break;
             case nameof(DocumentViewModel.Tool):
             case nameof(DocumentViewModel.AnnotationTool):
@@ -232,7 +290,14 @@ public partial class DocumentView : UserControl
 
         var style = ViewerPreferences.HandCursorStyle;
         Cursor cursor;
-        if (_vm.IsTypewriterTool || _vm.IsMarkupTool || _isSelecting)
+        var hoverArrow = _overExistingAnnotation && !_isPanning && !_isSelecting &&
+            (_vm.IsHandTool || _vm.IsSelectTool || _vm.IsMarkupTool) &&
+            (!_vm.HasAnnotationTool || _vm.IsMarkupTool);
+        if (hoverArrow)
+            cursor = AppCursors.MarkupHover;
+        else if (_vm.IsHighlightTool)
+            cursor = AppCursors.HighlighterFor(ViewerPreferences.GetAnnotationStyle(AnnotationKind.Highlight).Color);
+        else if (_vm.IsTypewriterTool || _vm.IsMarkupTool || _isSelecting)
             cursor = AppCursors.Ibeam;
         else if (_vm.HasAnnotationTool || _vm.IsSelectAnnotationTool || _isBoxing || _isMovingAnnotation || _isResizingAnnotation)
             cursor = new Cursor(StandardCursorType.Cross);
@@ -414,6 +479,16 @@ public partial class DocumentView : UserControl
             return;
         }
 
+        if (_vm is { IsMarkupTool: true })
+        {
+            _vm.AnnotationTool = AnnotationTool.None;
+            _vm.Tool = ViewerTool.Hand;
+            _vm.ClearSelection();
+            HidePopup();
+            e.Handled = true;
+            return;
+        }
+
         HidePopup();
         _contextAnchor = e.TryGetPosition(PageScroller, out var position) ? HitTestPage(position) : null;
         _hasContextAnchor = true;
@@ -551,7 +626,8 @@ public partial class DocumentView : UserControl
         if (_vm is null || !e.GetCurrentPoint(PageScroller).Properties.IsLeftButtonPressed || IsOnScrollBar(e.Source))
             return;
 
-        Focus();
+        if (!(_vm.IsNoteTool && _vm.HasAnnotationTool))
+            Focus();
         HidePopup();
         var position = e.GetPosition(PageScroller);
         var hit = HitTestPage(position);
@@ -651,8 +727,8 @@ public partial class DocumentView : UserControl
         var pageHit = hit.Value;
         if (_vm.IsNoteTool)
         {
-            _ = _vm.AddAnnotationAsync(_vm.CreateNote(pageHit.Page.Index, pageHit.PointInPoints), beginEdit: true);
             e.Handled = true;
+            _ = PlaceNoteAsync(pageHit);
             return;
         }
 
@@ -739,6 +815,7 @@ public partial class DocumentView : UserControl
             dragging.Model = _isMovingAnnotation
                 ? DocumentViewModel.Offset(original, current - _dragStartPoint)
                 : DocumentViewModel.Resize(original, _resizeHandle, _dragStartPoint, current);
+            PositionOpenEditors();
             e.Handled = true;
             return;
         }
@@ -755,6 +832,7 @@ public partial class DocumentView : UserControl
             ProbeTextUnderPointer(position);
 
         UpdatePopupHover(position);
+        UpdateMarkupHover(position);
     }
 
     private void OnPagePointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -785,7 +863,8 @@ public partial class DocumentView : UserControl
             }
 
             page.DraftRect = null;
-            _ = _vm.AddAnnotationAsync(_vm.CreateTextbox(_boxPageIndex, box, AnnotationKind.Textbox), beginEdit: true);
+            if (_vm.IsTextboxTool)
+                _ = _vm.AddAnnotationAsync(_vm.CreateTextbox(_boxPageIndex, box, AnnotationKind.Textbox), beginEdit: true);
             return;
         }
 
@@ -811,15 +890,23 @@ public partial class DocumentView : UserControl
         var wasMarkup = _vm?.IsMarkupTool == true;
         var kind = _vm?.AnnotationTool.Kind();
         _isSelecting = false;
-        _vm?.EndSelection();
         e.Pointer.Capture(null);
         e.Handled = true;
 
-        if (wasMarkup && kind is { } markup && _vm is not null)
-            _ = _vm.MarkupSelection(markup.ToString());
-
         var position = e.GetPosition(PageScroller);
-        DispatcherTimer.RunOnce(() => UpdatePopupHover(position), TimeSpan.FromMilliseconds(150));
+        _ = FinishTextSelectionAsync(wasMarkup, kind, position);
+    }
+
+    private async Task FinishTextSelectionAsync(bool wasMarkup, AnnotationKind? kind, Point position)
+    {
+        if (_vm is null)
+            return;
+
+        await _vm.FinalizeSelectionAsync();
+        if (wasMarkup && kind is { } markup)
+            await _vm.MarkupSelection(markup.ToString());
+        UpdatePopupHover(position);
+        UpdateMarkupHover(position);
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
@@ -935,6 +1022,12 @@ public partial class DocumentView : UserControl
 
     private void UpdatePopupHover(Point positionInScroller)
     {
+        if (SelectionPopupHost.IsPointerOver || PointerOverHost(SelectionPopupHost, positionInScroller))
+        {
+            _popupHideTimer.Stop();
+            return;
+        }
+
         if (_vm is not { HasSelection: true } || _isSelecting)
         {
             StartPopupHide();
@@ -1016,11 +1109,58 @@ public partial class DocumentView : UserControl
         AnnotationEditorHost.Begin(annotation, size ?? new Size(120, 24));
     }
 
-    private void OnNotePopupRequested(AnnotationViewModel annotation)
+    private async Task PlaceNoteAsync((PdfPageViewModel Page, Point PointInPoints) hit)
     {
-        HideEditors();
+        if (_vm is null)
+            return;
+        await _vm.AddAnnotationAsync(_vm.CreateNote(hit.Page.Index, hit.PointInPoints), beginEdit: true);
+        NotePopupHost.FocusEditor();
+    }
+
+    private void OnMarkupChromeRequested(AnnotationViewModel? annotation)
+    {
+        // Markup bar is hover-only: never pin it open after create/select.
+        if (annotation is null ||
+            _markupBarAnnotation is null ||
+            _markupBarAnnotation != annotation ||
+            !MarkupMiniBarHost.IsVisible)
+        {
+            HideMarkupBar();
+            return;
+        }
+
+        MarkupMiniBarHost.SetColor(annotation.Model.Style.Color);
+        PositionMarkupMiniBar(annotation);
+    }
+
+    private async Task RemoveMarkupFromBarAsync()
+    {
+        if (_vm is null || _markupBarAnnotation is not { } markup)
+            return;
+
+        _vm.SelectAnnotation(markup, add: false);
+        if (_vm.DeleteSelectedAnnotationsCommand.CanExecute(null))
+            await _vm.DeleteSelectedAnnotationsCommand.ExecuteAsync(null);
+        HideMarkupBar();
+    }
+
+    private void OnNotePopupRequested(AnnotationViewModel? annotation)
+    {
+        if (annotation is null)
+        {
+            HideNoteChrome();
+            return;
+        }
+
+        if (NotePopupHost.Annotation is { } previous && previous != annotation && _vm is not null)
+            _ = _vm.CloseNoteAsync(previous, NotePopupHost.CurrentText);
+
+        AnnotationEditorHost.HideEditor();
         NotePopupHost.Begin(annotation);
+        NoteMiniBarHost.IsVisible = true;
+        NoteMiniBarHost.SetColor(annotation.Model.Style.Color);
         PositionNotePopup(annotation);
+        PositionNoteMiniBar(annotation);
     }
 
     private void PositionOpenEditors()
@@ -1029,6 +1169,10 @@ public partial class DocumentView : UserControl
             PositionTextEditor(text);
         if (NotePopupHost.Annotation is { } note)
             PositionNotePopup(note);
+        if (NoteMiniBarHost.IsVisible && _vm?.PrimarySelection is { Kind: AnnotationKind.Note } selected)
+            PositionNoteMiniBar(selected);
+        if (MarkupMiniBarHost.IsVisible && _markupBarAnnotation is { } markup)
+            PositionMarkupMiniBar(markup);
     }
 
     private void PositionTextEditor(AnnotationViewModel annotation)
@@ -1045,17 +1189,182 @@ public partial class DocumentView : UserControl
 
     private void PositionNotePopup(AnnotationViewModel annotation)
     {
-        if (PageToLayer(annotation.PageIndex, annotation.Model.Bounds.TopRight) is not { } origin)
+        var iconRight = PageToLayer(annotation.PageIndex, annotation.Model.Bounds.TopRight);
+        var iconLeft = PageToLayer(annotation.PageIndex, annotation.Model.Bounds.TopLeft);
+        if (iconRight is null || iconLeft is null)
             return;
 
-        NotePopupHost.Measure(Size.Infinity);
-        var x = origin.X + 8;
-        var y = origin.Y;
-        var layer = PopupLayer.Bounds.Size;
-        if (x + NotePopupHost.DesiredSize.Width > layer.Width)
-            x = Math.Max(4, origin.X - NotePopupHost.DesiredSize.Width - 8);
+        double x, y;
+        if (annotation.Model.PopupBounds is { } popup &&
+            PageToLayer(annotation.PageIndex, popup.TopLeft) is { } origin &&
+            PageToLayerSize(annotation.PageIndex, popup.Size) is { } size)
+        {
+            NotePopupHost.Width = Math.Max(NotePopupHost.MinWidth, size.Width);
+            NotePopupHost.Height = Math.Max(NotePopupHost.MinHeight, size.Height);
+            x = origin.X;
+            y = origin.Y;
+        }
+        else
+        {
+            NotePopupHost.Measure(Size.Infinity);
+            var width = NotePopupHost.Width;
+            var height = NotePopupHost.Height;
+            x = iconRight.Value.X + 8;
+            y = iconLeft.Value.Y;
+            var layer = PopupLayer.Bounds.Size;
+            if (x + width > layer.Width)
+                x = Math.Max(4, iconLeft.Value.X - width - 8);
+            y = Math.Clamp(y, 4, Math.Max(4, layer.Height - height - 4));
+        }
+
         Canvas.SetLeft(NotePopupHost, x);
-        Canvas.SetTop(NotePopupHost, Math.Clamp(y, 4, Math.Max(4, layer.Height - NotePopupHost.DesiredSize.Height - 4)));
+        Canvas.SetTop(NotePopupHost, y);
+        NotePopupHost.SetPointerOnLeft(x >= iconRight.Value.X);
+    }
+
+    private void PositionNoteMiniBar(AnnotationViewModel annotation)
+    {
+        if (PageToLayer(annotation.PageIndex, annotation.Model.Bounds.TopLeft) is not { } origin)
+            return;
+
+        NoteMiniBarHost.Measure(Size.Infinity);
+        var size = NoteMiniBarHost.DesiredSize;
+        Canvas.SetLeft(NoteMiniBarHost, origin.X);
+        Canvas.SetTop(NoteMiniBarHost, origin.Y - size.Height - 6);
+        NoteMiniBarHost.SetColor(annotation.Model.Style.Color);
+    }
+
+    private void PositionMarkupMiniBar(AnnotationViewModel annotation)
+    {
+        if (PageToLayer(annotation.PageIndex, annotation.Model.Bounds.TopLeft) is not { } origin)
+            return;
+
+        MarkupMiniBarHost.Measure(Size.Infinity);
+        var size = MarkupMiniBarHost.DesiredSize;
+        Canvas.SetLeft(MarkupMiniBarHost, origin.X);
+        Canvas.SetTop(MarkupMiniBarHost, origin.Y - size.Height + 4);
+        MarkupMiniBarHost.SetColor(annotation.Model.Style.Color);
+    }
+
+    private void UpdateMarkupHover(Point positionInScroller)
+    {
+        if (_isSelecting || _isPanning || _isBoxing || _vm is null)
+            return;
+
+        // While a markup tool is active, skip hover chrome so it does not fight the apply flow.
+        if (_vm.HasAnnotationTool && !_vm.IsMarkupTool)
+            return;
+
+        if (MarkupMiniBarHost.IsColorFlyoutOpen ||
+            MarkupMiniBarHost.IsPointerOver ||
+            PointerOverHost(MarkupMiniBarHost, positionInScroller))
+        {
+            _markupHideTimer.Stop();
+            SetOverExistingAnnotation(true);
+            return;
+        }
+
+        if (HitTestPage(positionInScroller) is { } hit &&
+            _vm.HitTestAnnotation(hit.Page.Index, hit.PointInPoints) is { } annotation)
+        {
+            if (annotation.Model.IsMarkup)
+                ShowMarkupBar(annotation);
+            else
+                StartMarkupHide();
+            SetOverExistingAnnotation(true);
+            return;
+        }
+
+        StartMarkupHide();
+        SetOverExistingAnnotation(false);
+    }
+
+    private void SetOverExistingAnnotation(bool value)
+    {
+        if (_overExistingAnnotation == value)
+            return;
+        _overExistingAnnotation = value;
+        UpdateCursor();
+    }
+
+    private void ShowMarkupBar(AnnotationViewModel annotation)
+    {
+        _markupHideTimer.Stop();
+        _markupBarAnnotation = annotation;
+        MarkupMiniBarHost.IsVisible = true;
+        MarkupMiniBarHost.SetColor(annotation.Model.Style.Color);
+        PositionMarkupMiniBar(annotation);
+    }
+
+    private void StartMarkupHide()
+    {
+        if (MarkupMiniBarHost.IsColorFlyoutOpen)
+            return;
+        if (MarkupMiniBarHost.IsVisible && !_markupHideTimer.IsEnabled)
+            _markupHideTimer.Start();
+    }
+
+    private void HideMarkupBarIfHoverOnly()
+    {
+        if (MarkupMiniBarHost.IsColorFlyoutOpen)
+            return;
+        HideMarkupBar();
+    }
+
+    private void HideMarkupBar()
+    {
+        _markupHideTimer.Stop();
+        MarkupMiniBarHost.IsVisible = false;
+        _markupBarAnnotation = null;
+    }
+
+    private bool PointerOverHost(Control host, Point positionInScroller)
+    {
+        if (!host.IsVisible)
+            return false;
+        var local = PageScroller.TranslatePoint(positionInScroller, PopupLayer);
+        if (local is null)
+            return false;
+        var bounds = new Rect(Canvas.GetLeft(host), Canvas.GetTop(host),
+            host.Bounds.Width > 0 ? host.Bounds.Width : host.DesiredSize.Width,
+            host.Bounds.Height > 0 ? host.Bounds.Height : host.DesiredSize.Height);
+        return bounds.Inflate(PopupGap).Contains(local.Value);
+    }
+
+    private void PersistNotePopup(AnnotationViewModel annotation)
+    {
+        if (_vm is null)
+            return;
+        var left = Canvas.GetLeft(NotePopupHost);
+        var top = Canvas.GetTop(NotePopupHost);
+        if (double.IsNaN(left) || double.IsNaN(top))
+            return;
+        if (LayerToPage(annotation.PageIndex, new Point(left, top)) is not { } origin)
+            return;
+        if (LayerToPageSize(annotation.PageIndex, new Size(NotePopupHost.Bounds.Width, NotePopupHost.Bounds.Height)) is not { } size)
+            return;
+        if (PageToLayer(annotation.PageIndex, annotation.Model.Bounds.TopRight) is { } iconRight)
+            NotePopupHost.SetPointerOnLeft(left >= iconRight.X);
+        _ = _vm.SetPopupBoundsAsync(annotation, new Rect(origin, size));
+    }
+
+    private Point? LayerToPage(int pageIndex, Point layerPoint)
+    {
+        if (PageSurface(pageIndex) is not { } surface || _vm is null)
+            return null;
+        var local = PopupLayer.TranslatePoint(layerPoint, surface);
+        if (local is null)
+            return null;
+        var scale = surface.Bounds.Width / _vm.Pages[pageIndex].WidthPoints;
+        return new Point(local.Value.X / scale, local.Value.Y / scale);
+    }
+
+    private Size? LayerToPageSize(int pageIndex, Size layerSize)
+    {
+        if (PageSurface(pageIndex) is not { } surface || _vm is null)
+            return null;
+        var scale = surface.Bounds.Width / _vm.Pages[pageIndex].WidthPoints;
+        return new Size(layerSize.Width / scale, layerSize.Height / scale);
     }
 
     private Point? PageToLayer(int pageIndex, Point pagePoint)
@@ -1089,22 +1398,66 @@ public partial class DocumentView : UserControl
         HideEditors();
     }
 
+    private async Task CloseNotePellet(AnnotationViewModel annotation, string text)
+    {
+        if (_vm is null)
+            return;
+        await _vm.CloseNoteAsync(annotation, text);
+        NotePopupHost.HidePopup();
+        if (_vm.PrimarySelection?.Kind != AnnotationKind.Note)
+            NoteMiniBarHost.IsVisible = false;
+    }
+
+    private async Task CancelNotePellet(AnnotationViewModel annotation)
+    {
+        if (_vm is null)
+            return;
+        await _vm.CloseNoteAsync(annotation, annotation.IsNew ? string.Empty : NotePopupHost.CurrentText);
+        NotePopupHost.HidePopup();
+        if (annotation.IsNew)
+            NoteMiniBarHost.IsVisible = false;
+    }
+
+    private void ToggleNotePellet()
+    {
+        if (_vm?.PrimarySelection is not { Kind: AnnotationKind.Note } note)
+            return;
+        if (NotePopupHost.IsVisible && NotePopupHost.Annotation == note)
+            _ = CloseNotePellet(note, NotePopupHost.CurrentText);
+        else
+        {
+            NotePopupHost.Begin(note);
+            PositionNotePopup(note);
+        }
+    }
+
     private async Task DeleteFromPopup(AnnotationViewModel annotation)
     {
         if (_vm is null)
             return;
 
-        await _vm.CancelEditAsync(annotation, deleteIfNew: false);
+        if (annotation.IsEditing)
+            await _vm.CancelEditAsync(annotation, deleteIfNew: false);
+        NotePopupHost.HidePopup();
         _vm.SelectAnnotation(annotation, add: false);
         if (_vm.DeleteSelectedAnnotationsCommand.CanExecute(null))
             await _vm.DeleteSelectedAnnotationsCommand.ExecuteAsync(null);
-        HideEditors();
+        NoteMiniBarHost.IsVisible = false;
+    }
+
+    private void HideNoteChrome()
+    {
+        if (NotePopupHost.Annotation is { } note && _vm is not null)
+            _ = _vm.CloseNoteAsync(note, NotePopupHost.CurrentText);
+        NotePopupHost.HidePopup();
+        NoteMiniBarHost.IsVisible = false;
     }
 
     private void HideEditors()
     {
         AnnotationEditorHost.HideEditor();
-        NotePopupHost.HidePopup();
+        HideNoteChrome();
+        HideMarkupBar();
     }
 
     private static Rect NormalizeDraft(Point a, Point b)

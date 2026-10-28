@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -219,6 +221,34 @@ public sealed partial class PdfDocumentSession : IDisposable
             var written = fpdf_text.FPDFTextGetText(text.Text, startIndex, count, ref buffer[0]);
             var length = Math.Clamp(written - 1, 0, count);
             return new string(MemoryMarshal.Cast<ushort, char>(buffer.AsSpan(0, length)));
+        });
+
+    /// <summary>Page text whose character boxes intersect any of the given view-space rects.</summary>
+    public Task<string> GetTextInRectsAsync(int pageIndex, IReadOnlyList<Rect> rects) =>
+        _worker.InvokeAsync(() =>
+        {
+            ThrowIfDisposed();
+            if (rects.Count == 0)
+                return string.Empty;
+
+            var text = GetTextPage(pageIndex);
+            var pageText = ReadPageText(pageIndex);
+            var count = Math.Min(fpdf_text.FPDFTextCountChars(text.Text), pageText.Length);
+            var buffer = new StringBuilder();
+            for (int i = 0; i < count; i++)
+            {
+                double left = 0, right = 0, bottom = 0, top = 0;
+                if (fpdf_text.FPDFTextGetCharBox(text.Text, i, ref left, ref right, ref bottom, ref top) == 0)
+                    continue;
+
+                var a = PageToDevice(text, left, top);
+                var b = PageToDevice(text, right, bottom);
+                var box = new Rect(a, b).Normalize();
+                if (rects.Any(r => r.Intersects(box)))
+                    buffer.Append(pageText[i]);
+            }
+
+            return buffer.ToString();
         });
 
     /// <summary>Returns the font size of a character, or 0 when PDFium cannot tell.</summary>

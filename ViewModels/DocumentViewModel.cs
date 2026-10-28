@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -26,6 +27,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     private const long CacheBudgetBytes = 256L * 1024 * 1024;
     private const long MaxRenderPixels = 16_000_000;
     private const double HoverHitTolerance = 2;
+    private const double SelectionHitTolerance = 20;
     private static readonly double[] ZoomSteps = [25, 33, 50, 67, 75, 100, 125, 150, 200, 300, 400];
 
     private readonly PdfDocumentSession _session;
@@ -45,6 +47,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     private int _pendingSelectionPage = -1;
     private Point? _pendingSelectionPoint;
     private int _pumpGeneration = -1;
+    private int _lastGoodCharIndex = -1;
 
     public DocumentViewModel(PdfDocumentSession session, Action<string> setStatus,
         Action<DocumentViewModel> activate, Action<DocumentViewModel> close)
@@ -187,6 +190,9 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         Tool = ViewerTool.Select;
     }
 
+    public IBrush HighlightToolBrush =>
+        new SolidColorBrush(ViewerPreferences.GetAnnotationStyle(AnnotationKind.Highlight).Color);
+
     public bool IsPalmAndFistCursor => ViewerPreferences.HandCursorStyle == HandCursorStyle.PalmAndFist;
     public bool IsPalmCursor => ViewerPreferences.HandCursorStyle == HandCursorStyle.Palm;
     public bool IsMoveArrowsCursor => ViewerPreferences.HandCursorStyle == HandCursorStyle.MoveArrows;
@@ -232,6 +238,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(KeepToolSelected));
         OnPropertyChanged(nameof(ShowCommentChrome));
         OnPropertyChanged(nameof(ShowFormatPanel));
+        OnPropertyChanged(nameof(HighlightToolBrush));
     }
 
     [RelayCommand]
@@ -629,6 +636,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     public void BeginSelection(int pageIndex, Point point)
     {
         ClearSelection();
+        _lastGoodCharIndex = -1;
         _pendingSelectionPage = pageIndex;
         UpdateSelection(point);
     }
@@ -648,11 +656,31 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         _pendingSelectionPage = -1;
     }
 
+    /// <summary>Stops the drag and rebuilds rects from the last valid character span.</summary>
+    public async Task FinalizeSelectionAsync()
+    {
+        _pendingSelectionPoint = null;
+        _pendingSelectionPage = -1;
+        if (_selection is not { } range || range.AnchorIndex == range.ActiveIndex)
+            return;
+
+        try
+        {
+            var rects = await _session.GetTextRectsAsync(range.PageIndex, range.Start, range.Count);
+            Pages[range.PageIndex].SelectionRects = rects;
+            HasSelection = rects.Count > 0;
+        }
+        catch (Exception)
+        {
+        }
+    }
+
     public void ClearSelection()
     {
         _selectionGeneration++;
         _pendingSelectionPoint = null;
         _pendingSelectionPage = -1;
+        _lastGoodCharIndex = -1;
 
         if (_selection is { } previous && previous.PageIndex < Pages.Count)
             Pages[previous.PageIndex].SelectionRects = null;
@@ -676,8 +704,14 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
                     break;
 
                 var charIndex = await _session.HitTestCharAsync(pageIndex, point);
+                if (charIndex < 0)
+                    charIndex = await _session.HitTestCharAsync(pageIndex, point, SelectionHitTolerance);
+                if (charIndex < 0)
+                    charIndex = _lastGoodCharIndex;
                 if (generation != _selectionGeneration || charIndex < 0)
                     continue;
+
+                _lastGoodCharIndex = charIndex;
 
                 var range = _selection is { } current
                     ? current with { ActiveIndex = charIndex }

@@ -9,7 +9,7 @@ public partial class AnnotationViewModel(PdfAnnotation model) : ObservableObject
     [ObservableProperty] private PdfAnnotation _model = model;
     [ObservableProperty] private bool _isSelected;
 
-    /// <summary>True while an in-place editor or note popup is open; the PDF copy is hidden meanwhile.</summary>
+    /// <summary>True while an in-place FreeText editor is open; the PDF copy is hidden meanwhile. Notes keep their icon visible.</summary>
     [ObservableProperty] private bool _isEditing;
 
     /// <summary>True until the first commit of a newly placed annotation, so Esc can cancel it.</summary>

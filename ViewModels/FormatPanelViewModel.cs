@@ -47,8 +47,10 @@ public partial class FormatPanelViewModel : ObservableObject
     public IReadOnlyList<double> Widths => BorderWidths;
     public IReadOnlyList<double> Spacings => LineSpacings;
 
+    [ObservableProperty] private FormatFocus _focus = FormatFocus.All;
     [ObservableProperty] private bool _showNoteStyle;
     [ObservableProperty] private bool _showTextStyle;
+    [ObservableProperty] private bool _showMarkupStyle;
     [ObservableProperty] private bool _showBorderFill;
     [ObservableProperty] private bool _showArrange;
     [ObservableProperty] private bool _canPageCenter;
@@ -103,7 +105,7 @@ public partial class FormatPanelViewModel : ObservableObject
 
     public string PreviewText => ShowNoteStyle ? "Note" : "The quick brown fox";
     public string? PreviewIcon => ShowNoteStyle ? NoteIcons.Combined(Icon) : null;
-    public IBrush PreviewFill => new SolidColorBrush(ShowNoteStyle || !ShowTextStyle ? Color : FillColor);
+    public IBrush PreviewFill => new SolidColorBrush(ShowNoteStyle || ShowMarkupStyle || !ShowTextStyle ? Color : FillColor);
     public IBrush PreviewTextBrush => new SolidColorBrush(ShowNoteStyle ? Darken(Color) : TextColor);
 
     public void Sync()
@@ -112,7 +114,7 @@ public partial class FormatPanelViewModel : ObservableObject
         try
         {
             var selected = _document.SelectedAnnotations;
-            ShowArrange = selected.Count > 0;
+            ShowArrange = selected.Count > 0 && Focus == FormatFocus.All;
             CanPageCenter = selected.Count == 1;
             CanAlign = selected.Count >= 2;
             CanDistribute = selected.Count >= 3;
@@ -124,10 +126,17 @@ public partial class FormatPanelViewModel : ObservableObject
                     : _document.AnnotationTool.Kind();
 
             Title = kind?.DisplayName() ?? (selected.Count > 1 ? "Format" : "Format");
-            ShowNoteStyle = kind == AnnotationKind.Note;
-            ShowTextStyle = kind is AnnotationKind.Typewriter or AnnotationKind.Textbox or AnnotationKind.Callout
-                            or AnnotationKind.Note;
-            ShowBorderFill = kind is AnnotationKind.Textbox or AnnotationKind.Callout;
+            var note = kind == AnnotationKind.Note;
+            var texty = kind is AnnotationKind.Typewriter or AnnotationKind.Textbox or AnnotationKind.Callout
+                        or AnnotationKind.Note;
+            var markup = kind is AnnotationKind.Highlight or AnnotationKind.Underline
+                         or AnnotationKind.StrikeOut or AnnotationKind.Squiggly;
+            ShowNoteStyle = note && Focus != FormatFocus.Text;
+            ShowTextStyle = texty && Focus != FormatFocus.NoteStyle;
+            ShowMarkupStyle = markup && Focus != FormatFocus.Text && Focus != FormatFocus.NoteStyle;
+            ShowBorderFill = (kind is AnnotationKind.Textbox or AnnotationKind.Callout) && Focus == FormatFocus.All;
+            if (Focus != FormatFocus.All)
+                ShowArrange = false;
 
             var style = selected.Count > 0
                 ? selected[0].Model.Style
@@ -304,6 +313,13 @@ public partial class FormatPanelViewModel : ObservableObject
 
     private static Color Darken(Color color) =>
         Color.FromRgb((byte)(color.R * 0.4), (byte)(color.G * 0.4), (byte)(color.B * 0.4));
+}
+
+public enum FormatFocus
+{
+    All,
+    Text,
+    NoteStyle
 }
 
 public enum AnnotationArrange
