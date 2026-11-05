@@ -60,11 +60,14 @@
                      IsHitTestVisible="False"
                      Margin="2" />
           <DockPanel Margin="24,18" LastChildFill="True">
-            <Button DockPanel.Dock="Right"
-                    Classes="primary"
-                    Content="Open a PDF"
-                    VerticalAlignment="Center"
-                    Command="{Binding OpenFileCommand}" />
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <Button Classes="ghost"
+                      Content="Use as default PDF app"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).MakeDefaultPdfAppCommand}" />
+              <Button Classes="primary"
+                      Content="Open a PDF"
+                      Command="{Binding OpenFileCommand}" />
+            </StackPanel>
             <StackPanel Spacing="4" VerticalAlignment="Center" Margin="0,0,24,0">
               <TextBlock Text="Drop a PDF here" FontSize="18" FontWeight="SemiBold" />
               <TextBlock Classes="muted" Text="or choose a file from your computer. Press Ctrl+O at any time." />

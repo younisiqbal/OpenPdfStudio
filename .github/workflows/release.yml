@@ -10,10 +10,17 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        rid: [win-x64, linux-x64, osx-arm64]
+        include:
+          - rid: win-x64
+            os: windows-latest
+          - rid: linux-x64
+            os: ubuntu-latest
+          - rid: osx-arm64
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -21,28 +28,94 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=0.0.0-dev" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          [[ "$GITHUB_REF_TYPE" == "tag" ]] || version="0.0.0-dev"
           dotnet publish OpenPdfStudio.csproj -c Release -r ${{ matrix.rid }} \
             --self-contained true \
             -p:PublishSingleFile=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:DebugType=none \
             -p:DebugSymbols=false \
-            -p:Version="$version" \
+            -p:Version="${{ steps.version.outputs.value }}" \
             -o publish/${{ matrix.rid }}
+        shell: bash
 
       - name: Zip
+        shell: bash
         run: |
-          cd publish/${{ matrix.rid }}
-          zip -r "$GITHUB_WORKSPACE/OpenPdfStudio-${{ matrix.rid }}.zip" .
+          if command -v python3 >/dev/null; then py=python3; else py=python; fi
+          "$py" -c "import shutil; shutil.make_archive('OpenPdfStudio-${{ matrix.rid }}', 'zip', 'publish/${{ matrix.rid }}')"
+
+      - name: Windows setup
+        if: matrix.rid == 'win-x64'
+        run: |
+          choco install innosetup --no-progress -y
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+            "${{ github.workspace }}\packaging\windows\OpenPdfStudio.iss" `
+            "/DMyAppVersion=${{ steps.version.outputs.value }}" `
+            "/DPublishDir=${{ github.workspace }}\publish\win-x64" `
+            "/DRepoRoot=${{ github.workspace }}"
+
+      - name: Linux package
+        if: matrix.rid == 'linux-x64'
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.value }}"
+          rm -rf deb
+          mkdir -p deb/DEBIAN deb/usr/lib/openpdfstudio deb/usr/bin \
+            deb/usr/share/applications deb/usr/share/icons/hicolor/256x256/apps
+          cp -a publish/linux-x64/. deb/usr/lib/openpdfstudio/
+          chmod 755 deb/usr/lib/openpdfstudio/OpenPdfStudio
+          ln -s ../lib/openpdfstudio/OpenPdfStudio deb/usr/bin/OpenPdfStudio
+          cp packaging/linux/openpdfstudio.desktop deb/usr/share/applications/
+          cp packaging/icons/openpdfstudio.png deb/usr/share/icons/hicolor/256x256/apps/openpdfstudio.png
+          sed "s/@VERSION@/${version}/" packaging/linux/control > deb/DEBIAN/control
+          cp packaging/linux/postinst deb/DEBIAN/postinst
+          chmod 755 deb/DEBIAN/postinst
+          dpkg-deb --root-owner-group --build deb "OpenPdfStudio-linux-x64.deb"
+
+      - name: macOS disk image
+        if: matrix.rid == 'osx-arm64'
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.value }}"
+          app="OpenPdfStudio.app"
+          rm -rf "$app" dmg icon.iconset
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" icon.iconset dmg
+          cp -a publish/osx-arm64/. "$app/Contents/MacOS/"
+          chmod 755 "$app/Contents/MacOS/OpenPdfStudio"
+          sed "s/@VERSION@/${version}/g" packaging/macos/Info.plist > "$app/Contents/Info.plist"
+          src="packaging/icons/openpdfstudio.png"
+          sips -z 16 16 "$src" --out icon.iconset/icon_16x16.png
+          sips -z 32 32 "$src" --out icon.iconset/icon_16x16@2x.png
+          sips -z 32 32 "$src" --out icon.iconset/icon_32x32.png
+          sips -z 64 64 "$src" --out icon.iconset/icon_32x32@2x.png
+          sips -z 128 128 "$src" --out icon.iconset/icon_128x128.png
+          sips -z 256 256 "$src" --out icon.iconset/icon_128x128@2x.png
+          sips -z 256 256 "$src" --out icon.iconset/icon_256x256.png
+          sips -z 512 512 "$src" --out icon.iconset/icon_256x256@2x.png
+          sips -z 512 512 "$src" --out icon.iconset/icon_512x512.png
+          sips -z 1024 1024 "$src" --out icon.iconset/icon_512x512@2x.png
+          iconutil -c icns icon.iconset -o "$app/Contents/Resources/AppIcon.icns"
+          cp -R "$app" dmg/
+          ln -s /Applications dmg/Applications
+          hdiutil create -volname OpenPdfStudio -srcfolder dmg -ov -format UDZO "OpenPdfStudio-osx-arm64.dmg"
 
       - uses: actions/upload-artifact@v4
         with:
           name: OpenPdfStudio-${{ matrix.rid }}
-          path: OpenPdfStudio-${{ matrix.rid }}.zip
+          path: OpenPdfStudio-${{ matrix.rid }}*
+          if-no-files-found: error
 
   release:
     needs: build
@@ -58,4 +131,4 @@ jobs:
         with:
           name: OpenPdfStudio ${{ github.ref_name }}
           generate_release_notes: true
-          files: dist/*.zip
+          files: dist/*

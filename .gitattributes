@@ -1,0 +1,4 @@
+packaging/linux/postinst text eol=lf
+packaging/linux/control text eol=lf
+packaging/linux/openpdfstudio.desktop text eol=lf
+packaging/macos/Info.plist text eol=lf

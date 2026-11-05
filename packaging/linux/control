@@ -1,0 +1,11 @@
+Package: openpdfstudio
+Version: @VERSION@
+Section: text
+Priority: optional
+Architecture: amd64
+Depends: libgtk-3-0, libx11-6, libice6, libsm6, libfontconfig1, libc6
+Maintainer: Younis Iqbal <younisiqbal1@gmail.com>
+Homepage: https://openpdfstudio.github.io/
+Description: A fast, open source desktop PDF viewer
+ OpenPdfStudio renders PDFs with PDFium and edits comments on
+ Windows, Linux, and macOS. Files stay on this computer.

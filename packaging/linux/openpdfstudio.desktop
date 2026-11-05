@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=OpenPdfStudio
+Comment=A fast, open source desktop PDF viewer
+Exec=OpenPdfStudio %f
+Icon=openpdfstudio
+Terminal=false
+Categories=Office;Viewer;Graphics;
+MimeType=application/pdf;
+StartupWMClass=OpenPdfStudio
+StartupNotify=true

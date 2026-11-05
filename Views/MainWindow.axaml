@@ -65,6 +65,8 @@
         <Separator />
         <MenuItem Header="_Print..." InputGesture="Ctrl+P" Command="{Binding PrintCommand}" />
         <Separator />
+        <MenuItem Header="Use as _default PDF app..." Command="{Binding MakeDefaultPdfAppCommand}" />
+        <Separator />
         <MenuItem Header="E_xit" InputGesture="Alt+F4" Command="{Binding ExitCommand}" />
       </MenuItem>
       <MenuItem Header="_Edit">

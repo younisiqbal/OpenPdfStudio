@@ -36,6 +36,7 @@ public partial class MainWindow : Window
             _vm.PropertyChanged -= OnViewModelPropertyChanged;
             _vm.PickPdfAsync = null;
             _vm.RequestClose = null;
+            _vm.RequestActivate = null;
             _vm.RequestPasswordAsync = null;
             _vm.ShowErrorAsync = null;
             _vm.PickSavePathAsync = null;
@@ -51,6 +52,7 @@ public partial class MainWindow : Window
         _vm.PropertyChanged += OnViewModelPropertyChanged;
         _vm.PickPdfAsync = PickPdfAsync;
         _vm.RequestClose = Close;
+        _vm.RequestActivate = ActivateWindow;
         _vm.RequestPasswordAsync = (fileName, error) => new PasswordDialog(fileName, error).ShowDialog<string?>(this);
         _vm.ShowErrorAsync = (title, message) => new MessageDialog(title, message).ShowDialog(this);
         _vm.PickSavePathAsync = PickSavePathAsync;
@@ -58,6 +60,14 @@ public partial class MainWindow : Window
             await new SaveChangesDialog(fileName).ShowDialog<SaveChangesChoice?>(this) ?? SaveChangesChoice.Cancel;
         _vm.PrintDocumentAsync = PrintDocumentAsync;
         _vm.AdvancedSearch.PickFolderAsync = PickFolderAsync;
+    }
+
+    private void ActivateWindow()
+    {
+        if (WindowState == WindowState.Minimized)
+            WindowState = WindowState.Normal;
+        Show();
+        Activate();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

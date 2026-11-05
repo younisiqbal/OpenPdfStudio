@@ -118,6 +118,9 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Shows the print dialog for a document and prints it.</summary>
     public Func<DocumentViewModel, Task>? PrintDocumentAsync { get; set; }
 
+    /// <summary>Brings the main window to the front, used when a second launch opens a PDF.</summary>
+    public Action? RequestActivate { get; set; }
+
     public MainViewModel()
     {
         _isRibbonCollapsed = ViewerPreferences.RibbonCollapsed;
@@ -371,6 +374,9 @@ public partial class MainViewModel : ViewModelBase
 
     [RelayCommand]
     private void Exit() => RequestClose?.Invoke();
+
+    [RelayCommand]
+    private async Task MakeDefaultPdfApp() => Status = await PdfAssociation.MakeDefaultAsync();
 
     [RelayCommand(CanExecute = nameof(HasActiveDocument))]
     private async Task CloseActiveTab()
