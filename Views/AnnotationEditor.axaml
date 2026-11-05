@@ -2,12 +2,46 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="OpenPdfStudio.Views.AnnotationEditor"
              Focusable="True">
+  <UserControl.Styles>
+    <Style Selector="TextBox#Editor">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="#222222" />
+      <Setter Property="CaretBrush" Value="#222222" />
+      <Setter Property="SelectionBrush" Value="#FFB3D7FF" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBox#Editor:pointerover">
+      <Setter Property="Background" Value="White" />
+    </Style>
+    <Style Selector="TextBox#Editor:focus">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="CaretBrush" Value="#222222" />
+    </Style>
+    <Style Selector="TextBox#Editor /template/ TextPresenter#PART_TextPresenter">
+      <Setter Property="CaretBrush" Value="#222222" />
+    </Style>
+    <Style Selector="TextBox#Editor:focus /template/ TextPresenter#PART_TextPresenter">
+      <Setter Property="CaretBrush" Value="#222222" />
+    </Style>
+    <Style Selector="TextBox#Editor /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBox#Editor:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="White" />
+    </Style>
+    <Style Selector="TextBox#Editor:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="White" />
+    </Style>
+  </UserControl.Styles>
   <TextBox x:Name="Editor"
            AcceptsReturn="True"
            TextWrapping="Wrap"
-           BorderThickness="0"
+           MinHeight="0"
+           MinWidth="0"
            Padding="4,2"
-           Background="Transparent"
+           VerticalContentAlignment="Top"
            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
            ScrollViewer.VerticalScrollBarVisibility="Disabled" />
 </UserControl>

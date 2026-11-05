@@ -324,15 +324,6 @@
                     <TextBlock Text="Text box" />
                   </StackPanel>
                 </Button>
-                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsCalloutTool, FallbackValue=False}"
-                        Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
-                        CommandParameter="{x:Static models:AnnotationTool.Callout}"
-                        ToolTip.Tip="Callout">
-                  <StackPanel Spacing="2">
-                    <PathIcon Data="{StaticResource CalloutIcon}" />
-                    <TextBlock Text="Callout" />
-                  </StackPanel>
-                </Button>
               </StackPanel>
             </DockPanel>
             <Border Width="1" Margin="2,6" Background="{DynamicResource HairlineBrush}" />

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -10,7 +11,7 @@ using OpenPdfStudio.ViewModels;
 namespace OpenPdfStudio.Views.Controls;
 
 /// <summary>
-/// Draws selection outlines, resize handles, callout targets and the in-progress drag box over a page.
+/// Draws selection outlines, resize handles and the in-progress drag box over a page.
 /// Hit testing stays in DocumentView; this control does not receive pointer events.
 /// </summary>
 public class AnnotationOverlay : Control
@@ -26,15 +27,11 @@ public class AnnotationOverlay : Control
     public static readonly StyledProperty<Rect?> DraftRectProperty =
         AvaloniaProperty.Register<AnnotationOverlay, Rect?>(nameof(DraftRect));
 
-    public static readonly StyledProperty<Point?> DraftCalloutTargetProperty =
-        AvaloniaProperty.Register<AnnotationOverlay, Point?>(nameof(DraftCalloutTarget));
-
     private INotifyCollectionChanged? _collection;
 
     static AnnotationOverlay()
     {
-        AffectsRender<AnnotationOverlay>(AnnotationsProperty, PageWidthPointsProperty, DraftRectProperty,
-            DraftCalloutTargetProperty);
+        AffectsRender<AnnotationOverlay>(AnnotationsProperty, PageWidthPointsProperty, DraftRectProperty);
         IsHitTestVisibleProperty.OverrideDefaultValue<AnnotationOverlay>(false);
         AnnotationsProperty.Changed.AddClassHandler<AnnotationOverlay>((c, _) => c.BindCollection());
     }
@@ -55,12 +52,6 @@ public class AnnotationOverlay : Control
     {
         get => GetValue(DraftRectProperty);
         set => SetValue(DraftRectProperty, value);
-    }
-
-    public Point? DraftCalloutTarget
-    {
-        get => GetValue(DraftCalloutTargetProperty);
-        set => SetValue(DraftCalloutTargetProperty, value);
     }
 
     private void BindCollection()
@@ -128,30 +119,56 @@ public class AnnotationOverlay : Control
                 if (model.IsMarkup)
                     continue;
 
-                context.DrawRectangle(null, stroke, Scale(model.Bounds, scale));
-                if (model.Kind is not AnnotationKind.Note)
+                if (model.Kind == AnnotationKind.Note)
+                    DrawNoteIcon(context, model, scale);
+                else
                 {
+                    context.DrawRectangle(null, stroke, Scale(model.Bounds, scale));
                     foreach (var at in Handles(model.Bounds, scale))
                         DrawHandle(context, at, handleFill, handleStroke);
-                }
-
-                if (model.CalloutTarget is { } target)
-                {
-                    var from = ScalePoint(AppearanceBuilderAnchor(model.Bounds, target), scale);
-                    var to = ScalePoint(target, scale);
-                    context.DrawLine(stroke, from, to);
-                    DrawHandle(context, to, handleFill, handleStroke);
                 }
             }
         }
 
         if (DraftRect is { } rect && rect.Width > 0 && rect.Height > 0)
-        {
             context.DrawRectangle(new SolidColorBrush(Color.FromArgb(30, 0, 120, 215)), draft, Scale(rect, scale));
-            if (DraftCalloutTarget is { } target)
-                context.DrawLine(draft, ScalePoint(AppearanceBuilderAnchor(rect, target), scale), ScalePoint(target, scale));
+    }
+
+    private static void DrawNoteIcon(DrawingContext context, PdfAnnotation model, double scale)
+    {
+        var dest = Scale(model.Bounds, scale);
+        if (dest.Width <= 0 || dest.Height <= 0)
+            return;
+
+        var (body, detail) = NoteIcons.Get(model.Style.Icon);
+        if (ParseIcon(body) is not { } bodyGeometry)
+            return;
+
+        var iconScale = dest.Width / NoteIcons.Size;
+        using (context.PushTransform(Matrix.CreateScale(iconScale, iconScale) * Matrix.CreateTranslation(dest.X, dest.Y)))
+        {
+            var fill = new SolidColorBrush(model.Style.Color);
+            var outline = new Pen(new SolidColorBrush(Darken(model.Style.Color)), 0.8);
+            context.DrawGeometry(fill, outline, bodyGeometry);
+            if (!string.IsNullOrEmpty(detail) && ParseIcon(detail) is { } detailGeometry)
+                context.DrawGeometry(null, new Pen(new SolidColorBrush(Color.FromRgb(40, 40, 40)), 1.3), detailGeometry);
         }
     }
+
+    private static StreamGeometry? ParseIcon(string path)
+    {
+        try
+        {
+            return StreamGeometry.Parse(path);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+    }
+
+    private static Color Darken(Color color) =>
+        Color.FromRgb((byte)(color.R * 0.55), (byte)(color.G * 0.55), (byte)(color.B * 0.55));
 
     private static void DrawHandle(DrawingContext context, Point center, IBrush fill, Pen stroke)
     {
@@ -175,7 +192,4 @@ public class AnnotationOverlay : Control
         new(rect.X * scale, rect.Y * scale, rect.Width * scale, rect.Height * scale);
 
     private static Point ScalePoint(Point point, double scale) => new(point.X * scale, point.Y * scale);
-
-    private static Point AppearanceBuilderAnchor(Rect box, Point target) =>
-        OpenPdfStudio.Services.Pdf.Annotations.AppearanceBuilder.CalloutAnchor(box, target);
 }

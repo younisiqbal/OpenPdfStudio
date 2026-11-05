@@ -52,6 +52,7 @@ public partial class NotePopup : UserControl
     public event Action<AnnotationViewModel>? DeleteRequested;
     public event Action<AnnotationViewModel>? EditorFocused;
     public event Action<AnnotationViewModel>? Moved;
+    public event Action<AnnotationViewModel>? DragMoved;
     public event Action<AnnotationViewModel>? Resized;
 
     public AnnotationViewModel? Annotation => _annotation;
@@ -83,13 +84,7 @@ public partial class NotePopup : UserControl
         Dispatcher.UIThread.Post(() => _suppressFormat = false);
     }
 
-    public void SetPointerOnLeft(bool left)
-    {
-        PointerOnLeft = left;
-        LeftPointer.IsVisible = left;
-        RightPointer.IsVisible = !left;
-        Card.Margin = left ? new Thickness(11, 0, 0, 0) : new Thickness(0, 0, 11, 0);
-    }
+    public void SetPointerOnLeft(bool left) => PointerOnLeft = left;
 
     public void HidePopup()
     {
@@ -125,7 +120,9 @@ public partial class NotePopup : UserControl
         Editor.FontSize = style.FontSize;
         Editor.FontWeight = style.Bold ? FontWeight.Bold : FontWeight.Normal;
         Editor.FontStyle = style.Italic ? FontStyle.Italic : FontStyle.Normal;
+        Editor.Background = Brushes.White;
         Editor.Foreground = new SolidColorBrush(style.TextColor);
+        Editor.CaretBrush = new SolidColorBrush(style.TextColor);
         Editor.TextAlignment = style.Align switch
         {
             AnnotationTextAlign.Center => TextAlignment.Center,
@@ -201,7 +198,7 @@ public partial class NotePopup : UserControl
         Canvas.SetLeft(this, pos.X - _press.X);
         Canvas.SetTop(this, pos.Y - _press.Y);
         if (_annotation is { } annotation)
-            Moved?.Invoke(annotation);
+            DragMoved?.Invoke(annotation);
         e.Handled = true;
     }
 
@@ -234,6 +231,8 @@ public partial class NotePopup : UserControl
         var delta = e.GetPosition(parent) - _press;
         Width = Math.Max(MinWidth, _startSize.Width + delta.X);
         Height = Math.Max(MinHeight, _startSize.Height + delta.Y);
+        if (_annotation is { } annotation)
+            DragMoved?.Invoke(annotation);
         e.Handled = true;
     }
 

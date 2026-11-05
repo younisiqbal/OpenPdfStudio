@@ -22,8 +22,6 @@ internal static class AppearanceBuilder
     public const double TypewriterPadding = 2;
     public const double MinBoxWidth = 24;
     private const double LineHeightFactor = 1.2;
-    private const double ArrowLength = 9;
-    private const double ArrowHalfWidth = 4;
     private const double IconOutline = 0.8;
     private const double IconDetail = 1.3;
 
@@ -63,25 +61,19 @@ internal static class AppearanceBuilder
         var w = new ContentWriter(map);
         w.BeginOpacity(style.Opacity);
 
-        if (annotation.Kind == AnnotationKind.Callout && annotation.CalloutTarget is { } target)
-            WriteCalloutLine(w, bounds, target, style);
-
-        if (annotation.Kind != AnnotationKind.Typewriter)
+        if (style.FillColor is { } fill)
         {
-            if (style.FillColor is { } fill)
-            {
-                w.SetFill(fill);
-                w.Rect(bounds);
-                w.Op("f");
-            }
+            w.SetFill(fill);
+            w.Rect(bounds);
+            w.Op("f");
+        }
 
-            if (style.BorderColor is { } border && style.BorderWidth > 0)
-            {
-                w.SetStroke(border);
-                w.LineWidth(style.BorderWidth);
-                w.Rect(bounds.Deflate(style.BorderWidth / 2));
-                w.Op("S");
-            }
+        if (style.BorderColor is { } border && style.BorderWidth > 0)
+        {
+            w.SetStroke(border);
+            w.LineWidth(style.BorderWidth);
+            w.Rect(bounds.Deflate(style.BorderWidth / 2));
+            w.Op("S");
         }
 
         w.SetFill(style.TextColor);
@@ -149,54 +141,6 @@ internal static class AppearanceBuilder
 
         w.EndOpacity(style.Opacity);
         return w.ToString();
-    }
-
-    /// <summary>The point on the box edge the callout line starts from: the edge midpoint nearest the target.</summary>
-    public static Point CalloutAnchor(Rect box, Point target)
-    {
-        Point[] anchors =
-        [
-            new(box.Center.X, box.Top), new(box.Center.X, box.Bottom),
-            new(box.Left, box.Center.Y), new(box.Right, box.Center.Y)
-        ];
-
-        var best = anchors[0];
-        var bestDistance = double.MaxValue;
-        foreach (var anchor in anchors)
-        {
-            var distance = Vector.DistanceSquared(new Vector(anchor.X, anchor.Y), new Vector(target.X, target.Y));
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                best = anchor;
-            }
-        }
-
-        return best;
-    }
-
-    private static void WriteCalloutLine(ContentWriter w, Rect box, Point target, AnnotationStyle style)
-    {
-        var anchor = CalloutAnchor(box, target);
-        var color = style.BorderColor ?? style.TextColor;
-        var direction = new Vector(target.X - anchor.X, target.Y - anchor.Y);
-        var length = direction.Length;
-        if (length < 1)
-            return;
-
-        var unit = direction / length;
-        var normal = new Vector(-unit.Y, unit.X);
-        var arrowBase = target - unit * Math.Min(ArrowLength, length);
-
-        w.SetStroke(color);
-        w.SetFill(color);
-        w.LineWidth(Math.Max(1, style.BorderWidth));
-        w.Line(anchor, arrowBase);
-
-        w.MoveTo(target);
-        w.LineTo(arrowBase + normal * ArrowHalfWidth);
-        w.LineTo(arrowBase - normal * ArrowHalfWidth);
-        w.Op("h f");
     }
 
     private static bool WriteGlyph(ContentWriter w, FpdfFontT font, char c, Point origin, double size)

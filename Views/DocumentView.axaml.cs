@@ -55,7 +55,6 @@ public partial class DocumentView : UserControl
     private (PdfPageViewModel Page, Point PointInPoints)? _contextAnchor;
 
     private bool _isBoxing;
-    private bool _waitingCalloutTarget;
     private int _boxPageIndex = -1;
     private Point _boxStart;
     private Point _boxCurrent;
@@ -67,6 +66,7 @@ public partial class DocumentView : UserControl
     private PdfAnnotation? _dragOriginal;
     private Point _dragStartPoint;
     private bool _moved;
+    private bool _dragHidNote;
 
     public DocumentView()
     {
@@ -132,41 +132,37 @@ public partial class DocumentView : UserControl
         {
             if (_vm is null || AnnotationEditorHost.Annotation is not { } annotation)
                 return;
-            annotation.Model = annotation.Model with { Contents = AnnotationEditorHost.Text };
-            PositionTextEditor(annotation);
+            _ = GrowTextEditorAsync(annotation);
         };
         NotePopupHost.ContentsChanged += (annotation, text) => _ = _vm?.SaveNoteContentsAsync(annotation, text);
         NotePopupHost.Closed += (annotation, text) => _ = CloseNotePellet(annotation, text);
         NotePopupHost.Cancelled += annotation => _ = CancelNotePellet(annotation);
         NotePopupHost.DeleteRequested += annotation => _ = DeleteFromPopup(annotation);
-        NotePopupHost.EditorFocused += annotation => _vm?.OpenFormat(FormatFocus.Text);
         NotePopupHost.Moved += annotation => PersistNotePopup(annotation);
         NotePopupHost.Resized += annotation => PersistNotePopup(annotation);
+        NotePopupHost.DragMoved += _ => UpdateNoteConnector();
         NoteMiniBarHost.TogglePopup += ToggleNotePellet;
         NoteMiniBarHost.ColorPicked += color =>
         {
             if (_vm is not null)
                 _ = _vm.PatchStyleAsync(style => style with { Color = color });
         };
-        NoteMiniBarHost.SettingsClicked += () => _vm?.OpenFormat(FormatFocus.NoteStyle);
+        NoteMiniBarHost.SettingsClicked += () => _vm?.OpenFormat(FormatFocus.All);
         MarkupMiniBarHost.RemoveClicked += () => _ = RemoveMarkupFromBarAsync();
         MarkupMiniBarHost.CopyClicked += () =>
         {
             if (_markupBarAnnotation is { } markup)
                 _ = _vm?.CopyMarkupTextAsync(markup);
         };
-        MarkupMiniBarHost.CommentClicked += () =>
-        {
-            if (_markupBarAnnotation is { } markup)
-                _vm?.SelectAnnotation(markup, add: false);
-            _vm?.OpenFormat(FormatFocus.All);
-        };
+        MarkupMiniBarHost.CommentClicked += () => _ = AddNoteFromMarkupBarAsync();
         MarkupMiniBarHost.ColorPicked += color =>
         {
             MarkupMiniBarHost.SetColor(color);
-            if (_vm is null || _markupBarAnnotation is not { } markup)
+            if (_vm is null || _markupBarAnnotation is not { } target)
                 return;
-            _ = _vm.PatchStyleAsync(style => style with { Color = color }, target: markup);
+            _ = _vm.PatchStyleAsync(
+                style => target.Model.IsMarkup ? style with { Color = color } : style with { TextColor = color },
+                target: target);
         };
         MarkupMiniBarHost.PointerEntered += (_, _) => _markupHideTimer.Stop();
         MarkupMiniBarHost.PointerExited += (_, _) => StartMarkupHide();
@@ -291,8 +287,8 @@ public partial class DocumentView : UserControl
         var style = ViewerPreferences.HandCursorStyle;
         Cursor cursor;
         var hoverArrow = _overExistingAnnotation && !_isPanning && !_isSelecting &&
-            (_vm.IsHandTool || _vm.IsSelectTool || _vm.IsMarkupTool) &&
-            (!_vm.HasAnnotationTool || _vm.IsMarkupTool);
+            (_vm.IsHandTool || _vm.IsSelectTool || _vm.IsMarkupTool || _vm.IsFreetextTool) &&
+            (!_vm.HasAnnotationTool || _vm.IsMarkupTool || _vm.IsFreetextTool);
         if (hoverArrow)
             cursor = AppCursors.MarkupHover;
         else if (_vm.IsHighlightTool)
@@ -479,11 +475,11 @@ public partial class DocumentView : UserControl
             return;
         }
 
-        if (_vm is { IsMarkupTool: true })
+        if (_vm is { } contextVm && (contextVm.IsMarkupTool || contextVm.IsFreetextTool))
         {
-            _vm.AnnotationTool = AnnotationTool.None;
-            _vm.Tool = ViewerTool.Hand;
-            _vm.ClearSelection();
+            contextVm.AnnotationTool = AnnotationTool.None;
+            contextVm.Tool = ViewerTool.Hand;
+            contextVm.ClearSelection();
             HidePopup();
             e.Handled = true;
             return;
@@ -633,18 +629,6 @@ public partial class DocumentView : UserControl
         var hit = HitTestPage(position);
         var add = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
-        if (_waitingCalloutTarget && hit is { } calloutHit)
-        {
-            _waitingCalloutTarget = false;
-            var page = calloutHit.Page;
-            var box = NormalizeDraft(_boxStart, _boxCurrent);
-            page.DraftRect = null;
-            page.DraftCalloutTarget = null;
-            _ = _vm.AddAnnotationAsync(_vm.CreateTextbox(page.Index, box, AnnotationKind.Callout, calloutHit.PointInPoints), beginEdit: true);
-            e.Handled = true;
-            return;
-        }
-
         if (_vm.HasAnnotationTool)
         {
             HandleAnnotationToolPress(e, position, hit);
@@ -739,7 +723,7 @@ public partial class DocumentView : UserControl
             return;
         }
 
-        if (_vm.IsTextboxTool || _vm.IsCalloutTool)
+        if (_vm.IsTextboxTool)
         {
             _isBoxing = true;
             _boxPageIndex = pageHit.Page.Index;
@@ -766,6 +750,7 @@ public partial class DocumentView : UserControl
         _dragOriginal = annotation.Model;
         _dragStartPoint = point;
         _moved = false;
+        _dragHidNote = false;
         if (handle == AnnotationHandle.Move)
             _isMovingAnnotation = true;
         else
@@ -774,7 +759,33 @@ public partial class DocumentView : UserControl
             _resizeHandle = handle;
         }
 
+        if (annotation.Kind == AnnotationKind.Note && _vm is not null)
+        {
+            _dragHidNote = true;
+            _ = _vm.SetAnnotationHiddenAsync(annotation, hidden: true);
+        }
+
         UpdateCursor();
+    }
+
+    private async Task FinishAnnotationDragAsync(AnnotationViewModel dragged, PdfAnnotation original, bool hidNote, bool moved)
+    {
+        if (_vm is null)
+            return;
+
+        var ok = true;
+        if (moved)
+            ok = await _vm.MoveOrResizeAsync(dragged, dragged.Model, original);
+        else
+            dragged.Model = original;
+
+        if (!ok)
+            dragged.Model = original;
+
+        if (hidNote)
+            await _vm.SetAnnotationHiddenAsync(dragged, hidden: false);
+
+        PositionOpenEditors();
     }
 
     private void OnPagePointerMoved(object? sender, PointerEventArgs e)
@@ -800,8 +811,6 @@ public partial class DocumentView : UserControl
                 _boxCurrent = point;
                 var page = _vm.Pages[_boxPageIndex];
                 page.DraftRect = NormalizeDraft(_boxStart, _boxCurrent);
-                if (_waitingCalloutTarget || _vm.IsCalloutTool)
-                    page.DraftCalloutTarget = null;
             }
 
             e.Handled = true;
@@ -853,18 +862,9 @@ public partial class DocumentView : UserControl
             _isBoxing = false;
             e.Pointer.Capture(null);
             e.Handled = true;
-            if (_vm.IsCalloutTool)
-            {
-                _waitingCalloutTarget = true;
-                page.DraftRect = box;
-                _vm.SetStatusMessage("Click where the callout arrow should point");
-                UpdateCursor();
-                return;
-            }
-
             page.DraftRect = null;
             if (_vm.IsTextboxTool)
-                _ = _vm.AddAnnotationAsync(_vm.CreateTextbox(_boxPageIndex, box, AnnotationKind.Textbox), beginEdit: true);
+                _ = _vm.AddAnnotationAsync(_vm.CreateTextbox(_boxPageIndex, box), beginEdit: true);
             return;
         }
 
@@ -875,12 +875,12 @@ public partial class DocumentView : UserControl
             e.Pointer.Capture(null);
             e.Handled = true;
             UpdateCursor();
-            if (_moved)
-                _ = _vm?.MoveOrResizeAsync(dragged, dragged.Model);
-            else
-                dragged.Model = original;
+            var hidNote = _dragHidNote;
+            var moved = _moved;
+            _dragHidNote = false;
             _dragAnnotation = null;
             _dragOriginal = null;
+            _ = FinishAnnotationDragAsync(dragged, original, hidNote, moved);
             return;
         }
 
@@ -917,16 +917,7 @@ public partial class DocumentView : UserControl
         switch (e.Key)
         {
             case Key.Escape:
-                if (_waitingCalloutTarget)
-                {
-                    _waitingCalloutTarget = false;
-                    if (_boxPageIndex >= 0)
-                    {
-                        _vm.Pages[_boxPageIndex].DraftRect = null;
-                        _vm.Pages[_boxPageIndex].DraftCalloutTarget = null;
-                    }
-                }
-                else if (_vm.HasAnnotationTool)
+                if (_vm.HasAnnotationTool)
                     _vm.AnnotationTool = AnnotationTool.None;
                 else if (_vm.HasSelectedAnnotation)
                     _vm.ClearAnnotationSelection();
@@ -1117,6 +1108,18 @@ public partial class DocumentView : UserControl
         NotePopupHost.FocusEditor();
     }
 
+    private async Task AddNoteFromMarkupBarAsync()
+    {
+        if (_vm is null || _markupBarAnnotation is not { } markup)
+            return;
+
+        HideMarkupBar();
+        var bounds = markup.Model.Bounds;
+        var topLeft = new Point(bounds.Right, Math.Max(0, bounds.Top - DocumentViewModel.NoteSize));
+        await _vm.AddAnnotationAsync(_vm.CreateNote(markup.PageIndex, topLeft), beginEdit: true);
+        NotePopupHost.FocusEditor();
+    }
+
     private void OnMarkupChromeRequested(AnnotationViewModel? annotation)
     {
         // Markup bar is hover-only: never pin it open after create/select.
@@ -1129,7 +1132,7 @@ public partial class DocumentView : UserControl
             return;
         }
 
-        MarkupMiniBarHost.SetColor(annotation.Model.Style.Color);
+        MarkupMiniBarHost.SetColor(MiniBarColor(annotation));
         PositionMarkupMiniBar(annotation);
     }
 
@@ -1181,10 +1184,24 @@ public partial class DocumentView : UserControl
             PageToLayerSize(annotation.PageIndex, annotation.Model.Bounds.Size) is not { } size)
             return;
 
-        AnnotationEditorHost.Width = Math.Max(24, size.Width);
-        AnnotationEditorHost.Height = Math.Max(16, size.Height);
+        AnnotationEditorHost.Fit(size);
         Canvas.SetLeft(AnnotationEditorHost, origin.X);
         Canvas.SetTop(AnnotationEditorHost, origin.Y);
+    }
+
+    private async Task GrowTextEditorAsync(AnnotationViewModel annotation)
+    {
+        if (_vm is null)
+            return;
+
+        annotation.Model = annotation.Model with { Contents = AnnotationEditorHost.Text };
+        if (annotation.Kind == AnnotationKind.Typewriter)
+        {
+            var bounds = await _vm.MeasureFreeTextAsync(annotation.Model);
+            annotation.Model = annotation.Model with { Bounds = bounds };
+        }
+
+        PositionTextEditor(annotation);
     }
 
     private void PositionNotePopup(AnnotationViewModel annotation)
@@ -1220,6 +1237,57 @@ public partial class DocumentView : UserControl
         Canvas.SetLeft(NotePopupHost, x);
         Canvas.SetTop(NotePopupHost, y);
         NotePopupHost.SetPointerOnLeft(x >= iconRight.Value.X);
+        UpdateNoteConnector();
+    }
+
+    private void UpdateNoteConnector()
+    {
+        if (!NotePopupHost.IsVisible || NotePopupHost.Annotation is not { } note)
+        {
+            HideNoteConnector();
+            return;
+        }
+
+        if (PageToLayer(note.PageIndex, note.Model.Bounds.Center) is not { } icon)
+        {
+            HideNoteConnector();
+            return;
+        }
+
+        var left = Canvas.GetLeft(NotePopupHost);
+        var top = Canvas.GetTop(NotePopupHost);
+        if (double.IsNaN(left) || double.IsNaN(top))
+        {
+            HideNoteConnector();
+            return;
+        }
+
+        var width = NotePopupHost.Bounds.Width > 0 ? NotePopupHost.Bounds.Width : NotePopupHost.Width;
+        var height = NotePopupHost.Bounds.Height > 0 ? NotePopupHost.Bounds.Height : NotePopupHost.Height;
+        var card = new Rect(left, top, width, height);
+        var onLeft = icon.X <= card.Center.X;
+        NotePopupHost.SetPointerOnLeft(onLeft);
+
+        var edgeX = onLeft ? card.Left : card.Right;
+        var baseTop = card.Top + 8;
+        var baseBottom = Math.Min(card.Bottom - 8, baseTop + 56);
+        var geometry = new StreamGeometry();
+        using (var context = geometry.Open())
+        {
+            context.BeginFigure(icon, isFilled: true);
+            context.LineTo(new Point(edgeX, baseTop));
+            context.LineTo(new Point(edgeX, baseBottom));
+            context.EndFigure(isClosed: true);
+        }
+
+        NoteConnector.Data = geometry;
+        NoteConnector.IsVisible = true;
+    }
+
+    private void HideNoteConnector()
+    {
+        NoteConnector.IsVisible = false;
+        NoteConnector.Data = null;
     }
 
     private void PositionNoteMiniBar(AnnotationViewModel annotation)
@@ -1243,7 +1311,7 @@ public partial class DocumentView : UserControl
         var size = MarkupMiniBarHost.DesiredSize;
         Canvas.SetLeft(MarkupMiniBarHost, origin.X);
         Canvas.SetTop(MarkupMiniBarHost, origin.Y - size.Height + 4);
-        MarkupMiniBarHost.SetColor(annotation.Model.Style.Color);
+        MarkupMiniBarHost.SetColor(MiniBarColor(annotation));
     }
 
     private void UpdateMarkupHover(Point positionInScroller)
@@ -1251,8 +1319,14 @@ public partial class DocumentView : UserControl
         if (_isSelecting || _isPanning || _isBoxing || _vm is null)
             return;
 
-        // While a markup tool is active, skip hover chrome so it does not fight the apply flow.
-        if (_vm.HasAnnotationTool && !_vm.IsMarkupTool)
+        if (AnnotationEditorHost.IsVisible)
+        {
+            HideMarkupBar();
+            return;
+        }
+
+        // While the note tool is active, skip hover chrome so it does not fight placing.
+        if (_vm.HasAnnotationTool && !_vm.IsMarkupTool && !_vm.IsFreetextTool)
             return;
 
         if (MarkupMiniBarHost.IsColorFlyoutOpen ||
@@ -1267,7 +1341,7 @@ public partial class DocumentView : UserControl
         if (HitTestPage(positionInScroller) is { } hit &&
             _vm.HitTestAnnotation(hit.Page.Index, hit.PointInPoints) is { } annotation)
         {
-            if (annotation.Model.IsMarkup)
+            if (ShowsMiniBar(annotation))
                 ShowMarkupBar(annotation);
             else
                 StartMarkupHide();
@@ -1292,9 +1366,16 @@ public partial class DocumentView : UserControl
         _markupHideTimer.Stop();
         _markupBarAnnotation = annotation;
         MarkupMiniBarHost.IsVisible = true;
-        MarkupMiniBarHost.SetColor(annotation.Model.Style.Color);
+        MarkupMiniBarHost.SetColor(MiniBarColor(annotation));
         PositionMarkupMiniBar(annotation);
     }
+
+    private static bool ShowsMiniBar(AnnotationViewModel annotation) =>
+        annotation.Model.IsMarkup ||
+        annotation.Kind is AnnotationKind.Typewriter or AnnotationKind.Textbox;
+
+    private static Color MiniBarColor(AnnotationViewModel annotation) =>
+        annotation.Model.IsMarkup ? annotation.Model.Style.Color : annotation.Model.Style.TextColor;
 
     private void StartMarkupHide()
     {
@@ -1403,6 +1484,7 @@ public partial class DocumentView : UserControl
         if (_vm is null)
             return;
         await _vm.CloseNoteAsync(annotation, text);
+        HideNoteConnector();
         NotePopupHost.HidePopup();
         if (_vm.PrimarySelection?.Kind != AnnotationKind.Note)
             NoteMiniBarHost.IsVisible = false;
@@ -1412,10 +1494,20 @@ public partial class DocumentView : UserControl
     {
         if (_vm is null)
             return;
-        await _vm.CloseNoteAsync(annotation, annotation.IsNew ? string.Empty : NotePopupHost.CurrentText);
-        NotePopupHost.HidePopup();
-        if (annotation.IsNew)
+
+        HideNoteConnector();
+        if (annotation.IsNew && string.IsNullOrWhiteSpace(NotePopupHost.CurrentText))
+        {
+            NotePopupHost.HidePopup();
+            _vm.SelectAnnotation(annotation, add: false);
+            if (_vm.DeleteSelectedAnnotationsCommand.CanExecute(null))
+                await _vm.DeleteSelectedAnnotationsCommand.ExecuteAsync(null);
             NoteMiniBarHost.IsVisible = false;
+            return;
+        }
+
+        await _vm.CloseNoteAsync(annotation, NotePopupHost.CurrentText);
+        NotePopupHost.HidePopup();
     }
 
     private void ToggleNotePellet()
@@ -1438,6 +1530,7 @@ public partial class DocumentView : UserControl
 
         if (annotation.IsEditing)
             await _vm.CancelEditAsync(annotation, deleteIfNew: false);
+        HideNoteConnector();
         NotePopupHost.HidePopup();
         _vm.SelectAnnotation(annotation, add: false);
         if (_vm.DeleteSelectedAnnotationsCommand.CanExecute(null))
@@ -1449,6 +1542,7 @@ public partial class DocumentView : UserControl
     {
         if (NotePopupHost.Annotation is { } note && _vm is not null)
             _ = _vm.CloseNoteAsync(note, NotePopupHost.CurrentText);
+        HideNoteConnector();
         NotePopupHost.HidePopup();
         NoteMiniBarHost.IsVisible = false;
     }

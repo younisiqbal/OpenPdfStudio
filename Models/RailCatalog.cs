@@ -46,7 +46,6 @@ public static class RailCatalog
         new("Note", "Note", Comment, false, true),
         new("Typewriter", "Typewriter", Comment, false, true),
         new("Textbox", "Text box", Comment, false, true),
-        new("Callout", "Callout", Comment, false, true),
         new("KeepTool", "Keep tool", Comment, false, true),
         new("Format", "Format", Comment, false, true),
         new("Ruler", "Ruler", View, false, true),

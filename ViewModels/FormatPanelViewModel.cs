@@ -127,14 +127,14 @@ public partial class FormatPanelViewModel : ObservableObject
 
             Title = kind?.DisplayName() ?? (selected.Count > 1 ? "Format" : "Format");
             var note = kind == AnnotationKind.Note;
-            var texty = kind is AnnotationKind.Typewriter or AnnotationKind.Textbox or AnnotationKind.Callout
-                        or AnnotationKind.Note;
+            var texty = kind is AnnotationKind.Typewriter or AnnotationKind.Textbox or AnnotationKind.Note;
             var markup = kind is AnnotationKind.Highlight or AnnotationKind.Underline
                          or AnnotationKind.StrikeOut or AnnotationKind.Squiggly;
             ShowNoteStyle = note && Focus != FormatFocus.Text;
             ShowTextStyle = texty && Focus != FormatFocus.NoteStyle;
             ShowMarkupStyle = markup && Focus != FormatFocus.Text && Focus != FormatFocus.NoteStyle;
-            ShowBorderFill = (kind is AnnotationKind.Textbox or AnnotationKind.Callout) && Focus == FormatFocus.All;
+            ShowBorderFill = kind is AnnotationKind.Typewriter or AnnotationKind.Textbox
+                             && Focus == FormatFocus.All;
             if (Focus != FormatFocus.All)
                 ShowArrange = false;
 

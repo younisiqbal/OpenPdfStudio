@@ -1,10 +1,13 @@
 using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using IBrush = Avalonia.Media.IBrush;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using OpenPdfStudio.Models;
 using OpenPdfStudio.ViewModels;
 
@@ -12,8 +15,12 @@ namespace OpenPdfStudio.Views;
 
 public partial class AnnotationEditor : UserControl
 {
+    private static readonly IBrush Caret = new SolidColorBrush(Color.FromRgb(0x22, 0x22, 0x22));
+
     private AnnotationViewModel? _annotation;
     private bool _committed;
+
+    public double MinimumLineHeight => Editor.FontSize + Editor.Padding.Top + Editor.Padding.Bottom;
 
     public AnnotationEditor()
     {
@@ -34,13 +41,26 @@ public partial class AnnotationEditor : UserControl
     {
         _annotation = annotation;
         _committed = false;
-        Width = Math.Max(24, size.Width);
-        Height = Math.Max(16, size.Height);
         ApplyStyle(annotation.Model);
+        Fit(size);
         Editor.Text = annotation.Model.Contents;
         IsVisible = true;
-        Editor.Focus();
         Editor.CaretIndex = Editor.Text?.Length ?? 0;
+        ApplyCaretBrush();
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_annotation != annotation || _committed)
+                return;
+            ApplyCaretBrush();
+            Editor.CaretIndex = Editor.Text?.Length ?? 0;
+            Editor.Focus();
+        }, DispatcherPriority.Input);
+    }
+
+    public void Fit(Size size)
+    {
+        Width = Math.Max(24, size.Width);
+        Height = Math.Max(MinimumLineHeight, size.Height);
     }
 
     public void HideEditor()
@@ -62,6 +82,7 @@ public partial class AnnotationEditor : UserControl
         Editor.FontWeight = style.Bold ? FontWeight.Bold : FontWeight.Normal;
         Editor.FontStyle = style.Italic ? FontStyle.Italic : FontStyle.Normal;
         Editor.Foreground = new SolidColorBrush(style.TextColor);
+        ApplyCaretBrush();
         Editor.TextAlignment = style.Align switch
         {
             AnnotationTextAlign.Center => TextAlignment.Center,
@@ -69,11 +90,17 @@ public partial class AnnotationEditor : UserControl
             _ => TextAlignment.Left
         };
 
-        IBrush fill = model.Kind == AnnotationKind.Typewriter
-            ? Brushes.Transparent
-            : new SolidColorBrush(style.FillColor ?? Color.FromRgb(255, 255, 255));
+        var fill = new SolidColorBrush(style.FillColor ?? Colors.White);
         Editor.Background = fill;
         Background = fill;
+    }
+
+    private void ApplyCaretBrush()
+    {
+        Editor.CaretBrush = Caret;
+        Editor.ApplyTemplate();
+        foreach (var presenter in Editor.GetVisualDescendants().OfType<TextPresenter>())
+            presenter.CaretBrush = Caret;
     }
 
     private void OnEditorKeyDown(object? sender, KeyEventArgs e)

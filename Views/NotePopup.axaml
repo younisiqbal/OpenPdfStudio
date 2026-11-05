@@ -3,20 +3,34 @@
              x:Class="OpenPdfStudio.Views.NotePopup"
              Width="252" Height="168"
              MinWidth="180" MinHeight="120">
+  <UserControl.Styles>
+    <Style Selector="TextBox#Editor">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="Foreground" Value="#222222" />
+      <Setter Property="CaretBrush" Value="#222222" />
+      <Setter Property="SelectionBrush" Value="#FFB3D7FF" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBox#Editor:pointerover">
+      <Setter Property="Background" Value="White" />
+    </Style>
+    <Style Selector="TextBox#Editor:focus">
+      <Setter Property="Background" Value="White" />
+    </Style>
+    <Style Selector="TextBox#Editor /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBox#Editor:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="White" />
+    </Style>
+    <Style Selector="TextBox#Editor:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="White" />
+    </Style>
+  </UserControl.Styles>
   <Grid>
-    <Path x:Name="LeftPointer"
-          Data="M12,0 L0,12 L12,24 Z"
-          Fill="#FFFCE98A" Stroke="#D6C24A" StrokeThickness="1"
-          Width="12" Height="24"
-          HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,18,0,0" />
-    <Path x:Name="RightPointer"
-          Data="M0,0 L12,12 L0,24 Z"
-          Fill="#FFFCE98A" Stroke="#D6C24A" StrokeThickness="1"
-          Width="12" Height="24"
-          HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,0,0"
-          IsVisible="False" />
     <Border x:Name="Card"
-            Margin="11,0,0,0"
             Background="#FFFCE98A"
             BorderBrush="#D6C24A"
             BorderThickness="1"
@@ -42,14 +56,10 @@
                         FontSize="11" Foreground="#333" Content="Options ▾" />
                 <TextBlock x:Name="AuthorText" FontSize="11" Foreground="#333" VerticalAlignment="Center" />
               </DockPanel>
-              <Border Background="#F7F7F7" BorderBrush="#E0D070" BorderThickness="1" CornerRadius="1">
+              <Border Background="White" BorderBrush="#E0D070" BorderThickness="1" CornerRadius="1">
                 <TextBox x:Name="Editor"
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
-                         BorderThickness="0"
-                         Background="Transparent"
-                         Foreground="#222"
-                         CaretBrush="#222"
                          MinHeight="72" />
               </Border>
             </DockPanel>

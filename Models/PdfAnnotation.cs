@@ -10,7 +10,6 @@ public enum AnnotationKind
     Note,
     Typewriter,
     Textbox,
-    Callout,
     Highlight,
     Underline,
     StrikeOut,
@@ -77,9 +76,8 @@ public sealed record AnnotationStyle
     public static AnnotationStyle DefaultFor(AnnotationKind kind) => kind switch
     {
         AnnotationKind.Note => new AnnotationStyle { Color = Color.FromRgb(255, 221, 0) },
-        AnnotationKind.Typewriter => new AnnotationStyle { TextColor = Color.FromRgb(0, 0, 255) },
+        AnnotationKind.Typewriter => new AnnotationStyle { TextColor = Color.FromRgb(0, 0, 255), FillColor = Colors.White },
         AnnotationKind.Textbox => new AnnotationStyle { BorderColor = Color.FromRgb(230, 0, 0), FillColor = Colors.White, TextColor = Colors.Black },
-        AnnotationKind.Callout => new AnnotationStyle { BorderColor = Color.FromRgb(230, 0, 0), FillColor = Colors.White, TextColor = Colors.Black },
         AnnotationKind.Highlight => new AnnotationStyle { Color = Color.FromRgb(255, 235, 0) },
         AnnotationKind.Underline => new AnnotationStyle { Color = Color.FromRgb(0, 120, 215) },
         AnnotationKind.StrikeOut => new AnnotationStyle { Color = Color.FromRgb(230, 0, 0) },
@@ -90,7 +88,6 @@ public sealed record AnnotationStyle
 
 /// <summary>
 /// One annotation on a page. Geometry is in PDF points with a top-left origin, like text rects.
-/// For Callout, <see cref="Bounds"/> is the text box and <see cref="CalloutTarget"/> is where the arrow points.
 /// For markup, <see cref="Quads"/> are the marked line boxes and <see cref="Bounds"/> is their union.
 /// </summary>
 public sealed record PdfAnnotation
@@ -100,7 +97,6 @@ public sealed record PdfAnnotation
     public required AnnotationKind Kind { get; init; }
     public required Rect Bounds { get; init; }
     public IReadOnlyList<Rect> Quads { get; init; } = [];
-    public Point? CalloutTarget { get; init; }
     /// <summary>Sticky-note pellet on the page, in PDF points. Null keeps it parked to the right of the icon.</summary>
     public Rect? PopupBounds { get; init; }
     public string Contents { get; init; } = string.Empty;
@@ -108,23 +104,8 @@ public sealed record PdfAnnotation
     public DateTimeOffset Modified { get; init; } = DateTimeOffset.Now;
     public required AnnotationStyle Style { get; init; }
 
-    public bool IsFreeText => Kind is AnnotationKind.Typewriter or AnnotationKind.Textbox or AnnotationKind.Callout;
+    public bool IsFreeText => Kind is AnnotationKind.Typewriter or AnnotationKind.Textbox;
     public bool IsMarkup => Kind is AnnotationKind.Highlight or AnnotationKind.Underline or AnnotationKind.StrikeOut or AnnotationKind.Squiggly;
-
-    /// <summary>The area the annotation covers on the page, callout arrow included.</summary>
-    public Rect Extent
-    {
-        get
-        {
-            if (CalloutTarget is not { } target)
-                return Bounds;
-
-            // Rect.Union skips zero-size rects, so the target point is merged by hand.
-            var left = Math.Min(Bounds.Left, target.X);
-            var top = Math.Min(Bounds.Top, target.Y);
-            return new Rect(left, top, Math.Max(Bounds.Right, target.X) - left, Math.Max(Bounds.Bottom, target.Y) - top);
-        }
-    }
 
     public static string NewId() => "ops-" + Guid.NewGuid().ToString("N");
 }

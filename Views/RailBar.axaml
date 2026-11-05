@@ -422,22 +422,6 @@
         </StackPanel>
       </Button>
 
-      <Button Classes="nav" Classes.active="{Binding ActiveDocument.IsCalloutTool, FallbackValue=False}"
-              Command="{Binding ActiveDocument.UseAnnotationToolCommand}"
-              CommandParameter="{x:Static models:AnnotationTool.Callout}"
-              ToolTip.Tip="Callout">
-        <Button.IsVisible>
-          <MultiBinding Converter="{StaticResource PinVisible}" ConverterParameter="Callout">
-            <Binding Path="PinEpoch" />
-            <Binding Path="HasActiveDocument" />
-          </MultiBinding>
-        </Button.IsVisible>
-        <StackPanel Spacing="2">
-          <PathIcon Data="{StaticResource CalloutIcon}" />
-          <TextBlock Text="Callout" />
-        </StackPanel>
-      </Button>
-
       <Button Classes="nav" Classes.active="{Binding ActiveDocument.KeepToolSelected, FallbackValue=False}"
               Command="{Binding ActiveDocument.ToggleKeepToolSelectedCommand}"
               ToolTip.Tip="Keep tool selected">

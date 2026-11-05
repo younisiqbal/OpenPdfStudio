@@ -218,8 +218,7 @@
                                                PageWidthPoints="{Binding WidthPoints}" />
                     <controls:AnnotationOverlay Annotations="{Binding Annotations}"
                                                 PageWidthPoints="{Binding WidthPoints}"
-                                                DraftRect="{Binding DraftRect}"
-                                                DraftCalloutTarget="{Binding DraftCalloutTarget}" />
+                                                DraftRect="{Binding DraftRect}" />
                     <TextBlock Text="This page could not be rendered."
                                Foreground="#80000000"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -233,6 +232,8 @@
       </ScrollViewer>
 
       <Canvas x:Name="PopupLayer" ClipToBounds="False">
+        <Path x:Name="NoteConnector" Fill="#99FCE98A" Stroke="#D6C24A" StrokeThickness="1"
+              IsHitTestVisible="False" IsVisible="False" />
         <views:SelectionPopup x:Name="SelectionPopupHost" IsVisible="False" />
         <views:AnnotationEditor x:Name="AnnotationEditorHost" IsVisible="False" />
         <views:NotePopup x:Name="NotePopupHost" IsVisible="False" />

@@ -41,7 +41,7 @@ public partial class DocumentViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNoteTool), nameof(IsTypewriterTool), nameof(IsTextboxTool),
-        nameof(IsCalloutTool), nameof(IsHighlightTool), nameof(IsUnderlineTool), nameof(IsStrikeOutTool),
+        nameof(IsHighlightTool), nameof(IsUnderlineTool), nameof(IsStrikeOutTool),
         nameof(IsSquigglyTool), nameof(HasAnnotationTool), nameof(IsMarkupTool))]
     private AnnotationTool _annotationTool = AnnotationTool.None;
 
@@ -61,13 +61,13 @@ public partial class DocumentViewModel
     public bool IsNoteTool => AnnotationTool == AnnotationTool.Note;
     public bool IsTypewriterTool => AnnotationTool == AnnotationTool.Typewriter;
     public bool IsTextboxTool => AnnotationTool == AnnotationTool.Textbox;
-    public bool IsCalloutTool => AnnotationTool == AnnotationTool.Callout;
     public bool IsHighlightTool => AnnotationTool == AnnotationTool.Highlight;
     public bool IsUnderlineTool => AnnotationTool == AnnotationTool.Underline;
     public bool IsStrikeOutTool => AnnotationTool == AnnotationTool.StrikeOut;
     public bool IsSquigglyTool => AnnotationTool == AnnotationTool.Squiggly;
     public bool HasAnnotationTool => AnnotationTool != AnnotationTool.None;
     public bool IsMarkupTool => AnnotationTool.IsMarkup();
+    public bool IsFreetextTool => AnnotationTool is AnnotationTool.Typewriter or AnnotationTool.Textbox;
     public bool IsSelectAnnotationTool => Tool == ViewerTool.SelectAnnotation;
     public bool CanUndo => _undo.CanUndo;
     public bool CanRedo => _undo.CanRedo;
@@ -150,7 +150,7 @@ public partial class DocumentViewModel
 
     public void FinishAnnotationTool()
     {
-        var oneShot = AnnotationTool is AnnotationTool.Note or AnnotationTool.Textbox;
+        var oneShot = AnnotationTool is AnnotationTool.Note or AnnotationTool.Textbox or AnnotationTool.Typewriter;
         if (oneShot || !KeepToolSelected)
             AnnotationTool = AnnotationTool.None;
     }
@@ -200,25 +200,12 @@ public partial class DocumentViewModel
     {
         if (annotation.IsMarkup)
             return annotation.Quads.Any(q => q.Inflate(1).Contains(point));
-        if (annotation.Kind == AnnotationKind.Callout && annotation.CalloutTarget is { } target)
-        {
-            if (new Rect(target.X - 5, target.Y - 5, 10, 10).Contains(point))
-                return true;
-            if (annotation.Bounds.Inflate(2).Contains(point))
-                return true;
-            var anchor = AppearanceBuilder.CalloutAnchor(annotation.Bounds, target);
-            return DistanceToSegment(point, anchor, target) < 4;
-        }
 
         return annotation.Bounds.Inflate(annotation.Kind == AnnotationKind.Note ? 2 : 1).Contains(point);
     }
 
     public static AnnotationHandle HitHandle(PdfAnnotation annotation, Point point, double handleSize)
     {
-        if (annotation.Kind == AnnotationKind.Callout && annotation.CalloutTarget is { } target &&
-            new Rect(target.X - handleSize, target.Y - handleSize, handleSize * 2, handleSize * 2).Contains(point))
-            return AnnotationHandle.CalloutTarget;
-
         if (annotation.Kind is AnnotationKind.Note || annotation.IsMarkup)
             return AnnotationHandle.None;
 
@@ -353,15 +340,14 @@ public partial class DocumentViewModel
         Style = ViewerPreferences.GetAnnotationStyle(AnnotationKind.Typewriter)
     };
 
-    public PdfAnnotation CreateTextbox(int pageIndex, Rect bounds, AnnotationKind kind, Point? target = null) => new()
+    public PdfAnnotation CreateTextbox(int pageIndex, Rect bounds) => new()
     {
         Id = PdfAnnotation.NewId(),
         PageIndex = pageIndex,
-        Kind = kind,
+        Kind = AnnotationKind.Textbox,
         Bounds = NormalizeBox(bounds),
-        CalloutTarget = target,
         Author = Environment.UserName,
-        Style = ViewerPreferences.GetAnnotationStyle(kind)
+        Style = ViewerPreferences.GetAnnotationStyle(AnnotationKind.Textbox)
     };
 
     [RelayCommand]
@@ -459,12 +445,6 @@ public partial class DocumentViewModel
 
     public async Task CloseNoteAsync(AnnotationViewModel annotation, string contents)
     {
-        if (annotation.IsNew && string.IsNullOrWhiteSpace(contents))
-        {
-            await RemoveAnnotationCoreAsync(annotation, record: true);
-            return;
-        }
-
         await SaveNoteContentsAsync(annotation, contents);
         annotation.IsNew = false;
     }
@@ -473,12 +453,6 @@ public partial class DocumentViewModel
     {
         if (!annotation.IsEditing)
             return;
-
-        if (annotation.IsNew && string.IsNullOrWhiteSpace(contents))
-        {
-            await CancelEditAsync(annotation, deleteIfNew: true);
-            return;
-        }
 
         var before = annotation.Model;
         var after = before with { Contents = contents, Modified = DateTimeOffset.Now };
@@ -515,13 +489,27 @@ public partial class DocumentViewModel
         RefreshPage(Pages[annotation.PageIndex]);
     }
 
-    public async Task MoveOrResizeAsync(AnnotationViewModel annotation, PdfAnnotation after)
+    public async Task<bool> MoveOrResizeAsync(AnnotationViewModel annotation, PdfAnnotation after, PdfAnnotation? before = null)
     {
-        var before = annotation.Model;
+        before ??= annotation.Model;
+        if (after.Kind == AnnotationKind.Note)
+            after = after with { Bounds = new Rect(after.Bounds.TopLeft, new Size(NoteSize, NoteSize)) };
         if (before == after)
-            return;
+            return true;
 
-        await WriteUpdateAsync(annotation, before, after);
+        return await WriteUpdateAsync(annotation, before, after);
+    }
+
+    public async Task SetAnnotationHiddenAsync(AnnotationViewModel annotation, bool hidden)
+    {
+        try
+        {
+            await _session.SetAnnotationHiddenAsync(annotation.PageIndex, annotation.Id, hidden);
+            RefreshPage(Pages[annotation.PageIndex]);
+        }
+        catch (Exception)
+        {
+        }
     }
 
     public async Task MoveSelectedAsync(Vector delta)
@@ -571,15 +559,22 @@ public partial class DocumentViewModel
 
     public async Task CopyMarkupTextAsync(AnnotationViewModel annotation)
     {
-        if (!annotation.Model.IsMarkup || SetClipboardTextAsync is null)
+        if (SetClipboardTextAsync is null)
             return;
 
         try
         {
-            var text = await _session.GetTextInRectsAsync(annotation.PageIndex, annotation.Model.Quads);
+            string? text;
+            if (annotation.Model.IsMarkup)
+                text = await _session.GetTextInRectsAsync(annotation.PageIndex, annotation.Model.Quads);
+            else if (annotation.Kind is AnnotationKind.Typewriter or AnnotationKind.Textbox)
+                text = annotation.Model.Contents;
+            else
+                return;
+
             if (string.IsNullOrWhiteSpace(text))
             {
-                _setStatus("No text in that markup");
+                _setStatus("No text to copy");
                 return;
             }
 
@@ -588,9 +583,12 @@ public partial class DocumentViewModel
         }
         catch (Exception)
         {
-            _setStatus("Could not copy the marked text");
+            _setStatus("Could not copy the text");
         }
     }
+
+    public Task<Rect> MeasureFreeTextAsync(PdfAnnotation annotation) =>
+        _session.MeasureFreeTextAsync(annotation);
 
     public async Task PatchStyleAsync(Func<AnnotationStyle, AnnotationStyle> patch, string? mergeKey = null, AnnotationViewModel? target = null)
     {
@@ -661,7 +659,6 @@ public partial class DocumentViewModel
             var after = before with
             {
                 Bounds = bounds,
-                CalloutTarget = before.CalloutTarget is { } t ? t + delta : null,
                 Modified = DateTimeOffset.Now
             };
             changes.Add(new AnnotationChange(before, after));
@@ -758,17 +755,17 @@ public partial class DocumentViewModel
         return saved;
     }
 
-    private async Task WriteUpdateAsync(AnnotationViewModel annotation, PdfAnnotation before, PdfAnnotation after, string? mergeKey = null, TimeSpan? mergeWindow = null)
+    private async Task<bool> WriteUpdateAsync(AnnotationViewModel annotation, PdfAnnotation before, PdfAnnotation after, string? mergeKey = null, TimeSpan? mergeWindow = null)
     {
         annotation.Model = after;
-        await CommitUpdatesAsync([new AnnotationChange(before, after)], mergeKey,
+        return await CommitUpdatesAsync([new AnnotationChange(before, after)], mergeKey,
             mergeWindow ?? (mergeKey is null ? null : NewAnnotationMergeWindow));
     }
 
-    private async Task CommitUpdatesAsync(List<AnnotationChange> changes, string? mergeKey = null, TimeSpan? mergeWindow = null)
+    private async Task<bool> CommitUpdatesAsync(List<AnnotationChange> changes, string? mergeKey = null, TimeSpan? mergeWindow = null)
     {
         if (changes.Count == 0)
-            return;
+            return true;
 
         try
         {
@@ -783,10 +780,12 @@ public partial class DocumentViewModel
             }
 
             PushHistory(changes, mergeKey, mergeWindow);
+            return true;
         }
         catch (Exception)
         {
             _setStatus("Could not update the annotation");
+            return false;
         }
     }
 
@@ -835,11 +834,13 @@ public partial class DocumentViewModel
     public static PdfAnnotation Offset(PdfAnnotation annotation, Vector delta)
     {
         var quads = annotation.Quads.Count == 0 ? annotation.Quads : annotation.Quads.Select(q => new Rect(q.TopLeft + delta, q.Size)).ToList();
+        var bounds = new Rect(annotation.Bounds.TopLeft + delta, annotation.Bounds.Size);
+        if (annotation.Kind == AnnotationKind.Note)
+            bounds = new Rect(bounds.TopLeft, new Size(NoteSize, NoteSize));
         return annotation with
         {
-            Bounds = new Rect(annotation.Bounds.TopLeft + delta, annotation.Bounds.Size),
+            Bounds = bounds,
             Quads = quads,
-            CalloutTarget = annotation.CalloutTarget is { } t ? t + delta : null,
             Modified = DateTimeOffset.Now
         };
     }
@@ -862,9 +863,6 @@ public partial class DocumentViewModel
             bottom += delta.Y;
 
         var bounds = NormalizeBox(new Rect(new Point(left, top), new Point(right, bottom)));
-        if (handle == AnnotationHandle.CalloutTarget)
-            return annotation with { CalloutTarget = current, Modified = DateTimeOffset.Now };
-
         return annotation with { Bounds = bounds, Modified = DateTimeOffset.Now };
     }
 
@@ -931,17 +929,6 @@ public partial class DocumentViewModel
 
         return placed.ToList();
     }
-
-    private static double DistanceToSegment(Point p, Point a, Point b)
-    {
-        var ab = new Vector(b.X - a.X, b.Y - a.Y);
-        var length = ab.SquaredLength;
-        if (length < 1e-6)
-            return new Vector(p.X - a.X, p.Y - a.Y).Length;
-        var t = Math.Clamp(((p.X - a.X) * ab.X + (p.Y - a.Y) * ab.Y) / length, 0, 1);
-        var closest = a + ab * t;
-        return new Vector(p.X - closest.X, p.Y - closest.Y).Length;
-    }
 }
 
 public enum AnnotationHandle
@@ -955,6 +942,5 @@ public enum AnnotationHandle
     BottomRight,
     Bottom,
     BottomLeft,
-    Left,
-    CalloutTarget
+    Left
 }

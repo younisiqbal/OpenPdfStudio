@@ -28,7 +28,7 @@ public sealed partial class PdfDocumentSession
 
     /// <summary>
     /// Private key holding our layout and style as JSON. The fpdf_annot API can only write strings, so the
-    /// callout box, arrow target and full style live here; standard keys are still written for other readers.
+    /// text box, note popup and full style live here; standard keys are still written for other readers.
     /// </summary>
     private const string DataKey = "OPSData";
 
@@ -216,7 +216,6 @@ public sealed partial class PdfDocumentSession
             {
                 Kind = data.Kind,
                 Bounds = data.Box ?? annotation.Bounds,
-                CalloutTarget = data.Target,
                 PopupBounds = data.Popup,
                 Style = data.Style
             };
@@ -342,8 +341,7 @@ public sealed partial class PdfDocumentSession
             if (style.FillColor is { } fill)
                 fpdf_annot.FPDFAnnotSetColor(annot, FPDFANNOT_COLORTYPE.FPDFANNOT_COLORTYPE_InteriorColor, fill.R, fill.G, fill.B, alpha);
 
-            var extent = result.Extent;
-            SetRect(annot, map, extent.Inflate(result.Kind == AnnotationKind.Callout ? 6 : 0));
+            SetRect(annot, map, result.Bounds);
         }
 
         SetString(annot, DataKey, AnnotationData.Serialize(result));
@@ -542,12 +540,11 @@ public sealed partial class PdfDocumentSession
         {
             Kind = annotation.Kind.ToString(),
             Box = [annotation.Bounds.X, annotation.Bounds.Y, annotation.Bounds.Width, annotation.Bounds.Height],
-            Target = annotation.CalloutTarget is { } t ? [t.X, t.Y] : null,
             Popup = annotation.PopupBounds is { } p ? [p.X, p.Y, p.Width, p.Height] : null,
             Style = AnnotationStyleData.From(annotation.Style)
         });
 
-        public static (AnnotationKind Kind, Rect? Box, Point? Target, Rect? Popup, AnnotationStyle Style)? TryParse(string json)
+        public static (AnnotationKind Kind, Rect? Box, Rect? Popup, AnnotationStyle Style)? TryParse(string json)
         {
             if (string.IsNullOrWhiteSpace(json))
                 return null;
@@ -555,13 +552,17 @@ public sealed partial class PdfDocumentSession
             try
             {
                 var data = JsonSerializer.Deserialize<AnnotationData>(json);
-                if (data is null || !Enum.TryParse(data.Kind, out AnnotationKind kind))
+                if (data is null)
+                    return null;
+
+                // Older files stored callouts as their own kind. They open as text boxes.
+                var kindName = data.Kind == "Callout" ? nameof(AnnotationKind.Textbox) : data.Kind;
+                if (!Enum.TryParse(kindName, out AnnotationKind kind))
                     return null;
 
                 Rect? box = data.Box is { Length: 4 } b ? new Rect(b[0], b[1], b[2], b[3]) : null;
-                Point? target = data.Target is { Length: 2 } p ? new Point(p[0], p[1]) : null;
                 Rect? popup = data.Popup is { Length: 4 } pop ? new Rect(pop[0], pop[1], pop[2], pop[3]) : null;
-                return (kind, box, target, popup, data.Style.ToStyle());
+                return (kind, box, popup, data.Style.ToStyle());
             }
             catch (JsonException)
             {
