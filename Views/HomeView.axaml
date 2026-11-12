@@ -12,6 +12,24 @@
     <vm:HomeViewModel />
   </Design.DataContext>
 
+  <UserControl.Styles>
+    <Style Selector="Border.dropZone">
+      <Setter Property="Background" Value="{DynamicResource DropFillBrush}" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Border.dropZone.dragOver">
+      <Setter Property="Background" Value="{DynamicResource NavActiveBrush}" />
+      <Setter Property="RenderTransform" Value="scale(1.01)" />
+    </Style>
+    <Style Selector="Border.dropZone.dragOver Rectangle.dropOutline">
+      <Setter Property="StrokeThickness" Value="2.5" />
+    </Style>
+  </UserControl.Styles>
+
   <UserControl.Resources>
     <DataTemplate x:Key="FileRowTemplate" x:DataType="models:RecentFile">
       <Grid ColumnDefinitions="40,*,140,90,40" Margin="4,2">
@@ -50,9 +68,10 @@
                    Text="Free, open-source PDF viewing and editing. Your files never leave this computer." />
       </StackPanel>
 
-      <Border Classes="card" Background="{DynamicResource DropFillBrush}" Padding="4">
+      <Border Classes="card dropZone" Classes.dragOver="{Binding IsFileDragOver}" Padding="4">
         <Grid MinHeight="108">
-          <Rectangle Stroke="{DynamicResource AccentBrush}"
+          <Rectangle Classes="dropOutline"
+                     Stroke="{DynamicResource AccentBrush}"
                      StrokeThickness="1.5"
                      StrokeDashArray="6,5"
                      RadiusX="8" RadiusY="8"
@@ -69,7 +88,11 @@
                       Command="{Binding OpenFileCommand}" />
             </StackPanel>
             <StackPanel Spacing="4" VerticalAlignment="Center" Margin="0,0,24,0">
-              <TextBlock Text="Drop a PDF here" FontSize="18" FontWeight="SemiBold" />
+              <Panel>
+                <TextBlock Text="Drop a PDF here" FontSize="18" FontWeight="SemiBold" IsVisible="{Binding !IsFileDragOver}" />
+                <TextBlock Text="Release to open" FontSize="18" FontWeight="SemiBold"
+                           Foreground="{DynamicResource AccentBrush}" IsVisible="{Binding IsFileDragOver}" />
+              </Panel>
               <TextBlock Classes="muted" Text="or choose a file from your computer. Press Ctrl+O at any time." />
             </StackPanel>
           </DockPanel>

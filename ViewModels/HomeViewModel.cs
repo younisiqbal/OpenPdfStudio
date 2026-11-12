@@ -45,6 +45,9 @@ public partial class HomeViewModel : ViewModelBase
     [ObservableProperty] private bool _hasRecentFiles;
     [ObservableProperty] private bool _hasStarredFiles;
 
+    /// <summary>True while a file is being dragged over the window, to highlight the drop zone.</summary>
+    [ObservableProperty] private bool _isFileDragOver;
+
     [RelayCommand]
     private Task OpenFile() => _openPdf();
 

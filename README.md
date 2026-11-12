@@ -12,7 +12,7 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 
 ## Features
 
-- Open PDF files, including password-protected documents.
+- Open PDF files, including password-protected documents. Drag one or more PDFs onto the window to open them.
 - Home screen with recent files and starred files.
 - Open several documents at once in tabs.
 - Three page layouts from the bottom bar: continuous scroll, single page, and two pages side by side (the first page on its own, like a book cover). In single-page layout, scrolling past the end of a page turns to the next one. The layout you pick is remembered.

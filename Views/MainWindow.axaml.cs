@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -29,7 +30,55 @@ public partial class MainWindow : Window
         DataContextChanged += OnDataContextChanged;
         Closing += OnClosing;
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+
+        DragDrop.SetAllowDrop(this, true);
+        AddHandler(DragDrop.DragEnterEvent, OnDragOver);
+        AddHandler(DragDrop.DragOverEvent, OnDragOver);
+        AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
+        AddHandler(DragDrop.DropEvent, OnDrop);
     }
+
+    private void OnDragOver(object? sender, DragEventArgs e)
+    {
+        var hasPdf = DroppedPdfPaths(e).Count > 0;
+        e.DragEffects = hasPdf ? DragDropEffects.Copy : DragDropEffects.None;
+        if (_vm is not null)
+            _vm.Home.IsFileDragOver = hasPdf;
+        e.Handled = true;
+    }
+
+    private void OnDragLeave(object? sender, DragEventArgs e)
+    {
+        // Moving between child controls also raises leave; only clear once the pointer is outside the window.
+        var point = e.GetPosition(this);
+        if (_vm is not null && !new Avalonia.Rect(Bounds.Size).Contains(point))
+            _vm.Home.IsFileDragOver = false;
+    }
+
+    private async void OnDrop(object? sender, DragEventArgs e)
+    {
+        if (_vm is null)
+            return;
+
+        _vm.Home.IsFileDragOver = false;
+        e.Handled = true;
+        var paths = DroppedPdfPaths(e);
+        if (paths.Count == 0)
+        {
+            _vm.Status = "Only PDF files can be opened";
+            return;
+        }
+
+        foreach (var path in paths)
+            await _vm.OpenPathAsync(path);
+    }
+
+    private static List<string> DroppedPdfPaths(DragEventArgs e) =>
+        (e.DataTransfer.TryGetFiles() ?? [])
+            .Select(item => item.TryGetLocalPath())
+            .OfType<string>()
+            .Where(path => string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
