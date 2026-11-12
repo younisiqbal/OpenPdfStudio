@@ -125,7 +125,7 @@ public partial class MainViewModel
             }
 
             var suggested = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(files[0]))!, "Merged.pdf");
-            if (PickSavePathAsync is null || await PickSavePathAsync(suggested) is not { Length: > 0 } target)
+            if (PickSavePathAsync is null || await PickSavePathAsync(suggested, SaveFileType.Pdf) is not { Length: > 0 } target)
             {
                 Status = "Merge cancelled";
                 return;

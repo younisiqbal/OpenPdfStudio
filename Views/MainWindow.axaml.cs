@@ -88,10 +88,10 @@ public partial class MainWindow : Window
 
     private void OnDragOver(object? sender, DragEventArgs e)
     {
-        var hasPdf = DroppedPdfPaths(e).Count > 0;
-        e.DragEffects = hasPdf ? DragDropEffects.Copy : DragDropEffects.None;
+        var accepted = DroppedPaths(e).Any(path => IsPdfPath(path) || MainViewModel.IsWordPath(path));
+        e.DragEffects = accepted ? DragDropEffects.Copy : DragDropEffects.None;
         if (_vm is not null)
-            _vm.Home.IsFileDragOver = hasPdf;
+            _vm.Home.IsFileDragOver = accepted;
         e.Handled = true;
     }
 
@@ -110,23 +110,29 @@ public partial class MainWindow : Window
 
         _vm.Home.IsFileDragOver = false;
         e.Handled = true;
-        var paths = DroppedPdfPaths(e);
-        if (paths.Count == 0)
+        var paths = DroppedPaths(e);
+        var pdfs = paths.Where(IsPdfPath).ToList();
+        var wordDocuments = paths.Where(MainViewModel.IsWordPath).ToList();
+        if (pdfs.Count == 0 && wordDocuments.Count == 0)
         {
-            _vm.Status = "Only PDF files can be opened";
+            _vm.Status = "Only PDF files and Word documents can be dropped here";
             return;
         }
 
-        foreach (var path in paths)
+        foreach (var path in pdfs)
             await _vm.OpenPathAsync(path);
+        if (wordDocuments.Count > 0)
+            await _vm.OfferWordConversionAsync(wordDocuments);
     }
 
-    private static List<string> DroppedPdfPaths(DragEventArgs e) =>
+    private static List<string> DroppedPaths(DragEventArgs e) =>
         (e.DataTransfer.TryGetFiles() ?? [])
             .Select(item => item.TryGetLocalPath())
             .OfType<string>()
-            .Where(path => string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase))
             .ToList();
+
+    private static bool IsPdfPath(string path) =>
+        string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
@@ -139,6 +145,7 @@ public partial class MainWindow : Window
             _vm.RequestPasswordAsync = null;
             _vm.ShowErrorAsync = null;
             _vm.PickSavePathAsync = null;
+            _vm.PickWordAsync = null;
             _vm.ConfirmSaveChangesAsync = null;
             _vm.PrintDocumentAsync = null;
             _vm.ShowSettingsAsync = null;
@@ -160,6 +167,7 @@ public partial class MainWindow : Window
         _vm.RequestPasswordAsync = (fileName, error) => new PasswordDialog(fileName, error).ShowDialog<string?>(this);
         _vm.ShowErrorAsync = (title, message) => new MessageDialog(title, message).ShowDialog(this);
         _vm.PickSavePathAsync = PickSavePathAsync;
+        _vm.PickWordAsync = PickWordAsync;
         _vm.ConfirmSaveChangesAsync = async fileName =>
             await new SaveChangesDialog(fileName).ShowDialog<SaveChangesChoice?>(this) ?? SaveChangesChoice.Cancel;
         _vm.PrintDocumentAsync = PrintDocumentAsync;
@@ -262,20 +270,39 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task<string?> PickSavePathAsync(string currentPath)
+    private async Task<string?> PickSavePathAsync(string currentPath, SaveFileType type)
     {
         var folder = Path.GetDirectoryName(currentPath);
+        var word = type == SaveFileType.Word;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Save PDF as",
+            Title = word ? "Save Word document as" : "Save PDF as",
             SuggestedFileName = Path.GetFileName(currentPath),
             SuggestedStartLocation = folder is null ? null : await StorageProvider.TryGetFolderFromPathAsync(folder),
-            DefaultExtension = "pdf",
+            DefaultExtension = word ? "docx" : "pdf",
             ShowOverwritePrompt = true,
-            FileTypeChoices = [new FilePickerFileType("PDF files") { Patterns = ["*.pdf"] }]
+            FileTypeChoices = word
+                ? [new FilePickerFileType("Word documents") { Patterns = ["*.docx"] }]
+                : [new FilePickerFileType("PDF files") { Patterns = ["*.pdf"] }]
         });
 
         return file?.TryGetLocalPath();
+    }
+
+    private async Task<string?> PickWordAsync()
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose a Word document",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Word documents") { Patterns = ["*.docx", "*.docm", "*.doc"] },
+                FilePickerFileTypes.All
+            ]
+        });
+
+        return files.Count == 0 ? null : files[0].TryGetLocalPath();
     }
 
     private async Task<string?> PickFolderAsync()

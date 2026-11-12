@@ -340,7 +340,7 @@
     <Border Grid.Column="1" Classes="homeCanvas" Classes.dragOver="{Binding IsFileDragOver}">
       <DockPanel>
         <Panel DockPanel.Dock="Bottom" Margin="0,8,0,14" HorizontalAlignment="Center">
-          <TextBlock Classes="homeMuted" FontSize="13" Text="Drag PDFs anywhere to open"
+          <TextBlock Classes="homeMuted" FontSize="13" Text="Drag PDFs anywhere to open, or Word documents to convert"
                      IsVisible="{Binding !IsFileDragOver}" />
           <TextBlock FontSize="13" FontWeight="SemiBold" Text="Release to open"
                      Foreground="{DynamicResource AccentBrush}"
@@ -391,14 +391,21 @@
                 </StackPanel>
               </Button>
 
-              <Button Classes="taskCard" Command="{Binding ComingSoonCommand}" CommandParameter="Convert to Word"
+              <Button Classes="taskCard"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ConvertToWordCommand}"
                       ToolTip.Tip="Export a PDF as an editable Word document">
                 <StackPanel Spacing="14">
                   <PathIcon Data="{StaticResource WordFileIcon}" Foreground="#2E9E4F" />
-                  <StackPanel Spacing="2">
-                    <TextBlock Classes="label" Text="Convert to Word" />
-                    <TextBlock Classes="soon" Text="Coming soon" />
-                  </StackPanel>
+                  <TextBlock Classes="label" Text="Convert to Word" />
+                </StackPanel>
+              </Button>
+
+              <Button Classes="taskCard"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ConvertWordToPdfCommand}"
+                      ToolTip.Tip="Turn a Word document (.docx) into a PDF">
+                <StackPanel Spacing="14">
+                  <PathIcon Data="{StaticResource WordFileIcon}" Foreground="#2B579A" />
+                  <TextBlock Classes="label" Text="Word to PDF" />
                 </StackPanel>
               </Button>
 

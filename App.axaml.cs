@@ -22,6 +22,11 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+        QuestPDF.Settings.ThrowOnMissingTextGlyphs = false;
+        QuestPDF.Settings.ThrowOnMissingFontFamilies = false;
+        QuestPDF.Settings.UseSystemFonts = true;
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var viewModel = new MainViewModel();

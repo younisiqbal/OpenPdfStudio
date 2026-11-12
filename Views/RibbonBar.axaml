@@ -103,6 +103,13 @@
                 </MenuItem>
                 <MenuItem Header="Save _As..." InputGesture="Ctrl+Shift+S" Command="{Binding SaveAsCommand}" />
                 <Separator />
+                <MenuItem Header="Create PDF from _Word..." Command="{Binding ConvertWordToPdfCommand}">
+                  <MenuItem.Icon>
+                    <PathIcon Data="{StaticResource WordFileIcon}" Width="14" Height="14" />
+                  </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Export to Wor_d..." Command="{Binding ConvertToWordCommand}" />
+                <Separator />
                 <MenuItem Header="_Print..." InputGesture="Ctrl+P" Command="{Binding PrintCommand}">
                   <MenuItem.Icon>
                     <PathIcon Data="{StaticResource PrintIcon}" Width="14" Height="14" />
@@ -342,6 +349,21 @@
                 <StackPanel Spacing="2">
                   <PathIcon Data="{StaticResource AdvancedSearchIcon}" />
                   <TextBlock Text="Advanced" />
+                </StackPanel>
+              </Button>
+              <Border Classes="ribbonSeparator" />
+              <Button Classes="tool" Command="{Binding ConvertToWordCommand}"
+                      ToolTip.Tip="Convert this PDF to an editable Word document">
+                <StackPanel Spacing="2">
+                  <PathIcon Data="{StaticResource WordFileIcon}" />
+                  <TextBlock Text="To Word" />
+                </StackPanel>
+              </Button>
+              <Button Classes="tool" Command="{Binding ConvertWordToPdfCommand}"
+                      ToolTip.Tip="Create a PDF from a Word document (.docx)">
+                <StackPanel Spacing="2">
+                  <PathIcon Data="{StaticResource WordFileIcon}" />
+                  <TextBlock Text="From Word" />
                 </StackPanel>
               </Button>
             </StackPanel>

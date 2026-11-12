@@ -114,8 +114,8 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Shows a blocking error message. Arguments: title, message.</summary>
     public Func<string, string, Task>? ShowErrorAsync { get; set; }
 
-    /// <summary>Asks where to save. Argument: the current path. Returns null on cancel.</summary>
-    public Func<string, Task<string?>>? PickSavePathAsync { get; set; }
+    /// <summary>Asks where to save. Arguments: the suggested path, the kind of file. Returns null on cancel.</summary>
+    public Func<string, SaveFileType, Task<string?>>? PickSavePathAsync { get; set; }
 
     /// <summary>Asks whether to save changes to a file before closing it. Argument: file name.</summary>
     public Func<string, Task<SaveChangesChoice>>? ConfirmSaveChangesAsync { get; set; }
@@ -325,7 +325,7 @@ public partial class MainViewModel : ViewModelBase
             if (PickSavePathAsync is null)
                 return false;
 
-            var picked = await PickSavePathAsync(document.FilePath);
+            var picked = await PickSavePathAsync(document.FilePath, SaveFileType.Pdf);
             if (string.IsNullOrEmpty(picked))
             {
                 Status = "Save cancelled";
