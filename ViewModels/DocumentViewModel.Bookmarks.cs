@@ -58,14 +58,7 @@ public partial class DocumentViewModel
     private void ToggleBookmarks() => ToggleSidePanel(SidePanel.Bookmarks);
 
     [RelayCommand]
-    private void ShowPagesTab() => SidePanel = SidePanel.Pages;
-
-    [RelayCommand]
-    private void ShowBookmarksTab()
-    {
-        SidePanel = SidePanel.Bookmarks;
-        _ = LoadOutlineAsync();
-    }
+    private void CloseSidePanel() => IsThumbnailsVisible = false;
 
     private void ToggleSidePanel(SidePanel panel)
     {

@@ -60,19 +60,34 @@
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
       <Setter Property="Background" Value="{DynamicResource NavActiveBrush}" />
     </Style>
-    <Style Selector="Button.sideTab">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Style Selector="Button.paneStrip">
+      <Setter Property="Width" Value="36" />
+      <Setter Property="Height" Value="36" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
-      <Setter Property="Padding" Value="6,5" />
-      <Setter Property="FontSize" Value="12" />
-      <Setter Property="CornerRadius" Value="0" />
-      <Setter Property="BorderThickness" Value="0,0,0,2" />
-      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
-    <Style Selector="Button.sideTab.active">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Style Selector="Button.paneStrip /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.paneStrip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#26FFFFFF" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.paneStrip.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#40FFFFFF" />
+    </Style>
+    <Style Selector="Button.paneStrip PathIcon">
+      <Setter Property="Width" Value="18" />
+      <Setter Property="Height" Value="18" />
+    </Style>
+    <Style Selector="TextBlock.paneTitle">
+      <Setter Property="FontSize" Value="12" />
       <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Opacity" Value="0.75" />
     </Style>
   </UserControl.Styles>
 
@@ -82,18 +97,42 @@
       <views:FormatPanel DataContext="{Binding Format}" />
     </Border>
 
+    <Border DockPanel.Dock="Left" Width="44"
+            IsVisible="{Binding ShowBottomBar}"
+            Background="{DynamicResource AccentBrush}">
+      <StackPanel Margin="0,8" Spacing="4">
+        <Button Classes="paneStrip" Classes.active="{Binding IsPagesOpen}"
+                Command="{Binding ToggleThumbnailsCommand}" ToolTip.Tip="Pages">
+          <PathIcon Data="{StaticResource OutlineIcon}" />
+        </Button>
+        <Button Classes="paneStrip" Classes.active="{Binding IsBookmarksOpen}"
+                Command="{Binding ToggleBookmarksCommand}" ToolTip.Tip="Bookmarks">
+          <PathIcon Data="{StaticResource BookmarkIcon}" />
+        </Button>
+        <Button Classes="paneStrip"
+                Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).FindCommand, FallbackValue={x:Null}}"
+                ToolTip.Tip="Search (Ctrl+F)">
+          <PathIcon Data="{StaticResource SearchIcon}" />
+        </Button>
+      </StackPanel>
+    </Border>
+
     <Border DockPanel.Dock="Left"
             IsVisible="{Binding ShowSidePanel}"
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,1,0">
       <DockPanel>
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*" Margin="6,6,6,0">
-          <Button Grid.Column="0" Classes="sideTab" Classes.active="{Binding ShowThumbnailPane}"
-                  Content="Pages" Command="{Binding ShowPagesTabCommand}" />
-          <Button Grid.Column="1" Classes="sideTab" Classes.active="{Binding ShowBookmarkPane}"
-                  Content="Bookmarks" Command="{Binding ShowBookmarksTabCommand}" />
-        </Grid>
+        <DockPanel DockPanel.Dock="Top" Margin="12,8,6,0">
+          <Button DockPanel.Dock="Right" Classes="icon" Command="{Binding CloseSidePanelCommand}"
+                  ToolTip.Tip="Close panel">
+            <PathIcon Data="{StaticResource CloseIcon}" Width="10" Height="10" />
+          </Button>
+          <Panel VerticalAlignment="Center">
+            <TextBlock Classes="paneTitle" Text="PAGES" IsVisible="{Binding ShowThumbnailPane}" />
+            <TextBlock Classes="paneTitle" Text="BOOKMARKS" IsVisible="{Binding ShowBookmarkPane}" />
+          </Panel>
+        </DockPanel>
 
         <Panel>
           <ScrollViewer Width="152" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding ShowThumbnailPane}">

@@ -28,8 +28,8 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private ViewModelBase _currentPage;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsHomeActive), nameof(HasActiveDocument), nameof(ShowRibbon), nameof(ShowRailDivider),
-        nameof(ShowAppMenu), nameof(ShowRail), nameof(ShowTopSearch), nameof(ShowTabStrip))]
+    [NotifyPropertyChangedFor(nameof(IsHomeActive), nameof(HasActiveDocument), nameof(ShowDocumentToolbar), nameof(ShowRailDivider),
+        nameof(ShowAppMenu), nameof(ShowTabStrip))]
     [NotifyCanExecuteChangedFor(nameof(ZoomInCommand), nameof(ZoomOutCommand), nameof(FitWidthCommand),
         nameof(FitPageCommand), nameof(CloseActiveTabCommand), nameof(CopySelectionCommand),
         nameof(FindCommand), nameof(FindNextCommand), nameof(FindPreviousCommand), nameof(ToggleRulerCommand),
@@ -40,14 +40,14 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>Read Mode: the document fills the window with menus, tabs, rail and status bar hidden.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowRibbon),
-        nameof(ShowAppMenu), nameof(ShowRail), nameof(ShowTabStrip))]
+    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowDocumentToolbar),
+        nameof(ShowAppMenu), nameof(ShowTabStrip))]
     private bool _isReadMode;
 
     /// <summary>Full Screen: like Read Mode, and the window covers the whole screen.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowRibbon),
-        nameof(ShowAppMenu), nameof(ShowRail), nameof(ShowTabStrip))]
+    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowDocumentToolbar),
+        nameof(ShowAppMenu), nameof(ShowTabStrip))]
     private bool _isFullScreen;
 
     [ObservableProperty]
@@ -81,12 +81,10 @@ public partial class MainViewModel : ViewModelBase
 
     public bool IsHomeActive => ActiveDocument is null;
     public bool HasActiveDocument => ActiveDocument is not null;
-    public bool ShowRibbon => HasActiveDocument && IsChromeVisible;
+    public bool ShowDocumentToolbar => HasActiveDocument && IsChromeVisible;
 
-    // The home screen has its own sidebar menu, so the app menu, rail and search only show with a document.
+    // The home screen has its own sidebar menu, so the app menu only shows with a document.
     public bool ShowAppMenu => IsChromeVisible && HasActiveDocument;
-    public bool ShowRail => IsChromeVisible && HasActiveDocument;
-    public bool ShowTopSearch => HasActiveDocument;
     public bool ShowTabStrip => IsChromeVisible && (HasActiveDocument || Documents.Count > 0);
     public bool IsRibbonExpanded => !IsRibbonCollapsed;
     public bool IsHomeTab => SelectedRibbonTab == RibbonTab.Home;

@@ -4,7 +4,7 @@
              x:Class="OpenPdfStudio.Views.TopSearchBox"
              x:DataType="vm:TopSearchViewModel">
   <Panel>
-    <TextBox x:Name="SearchBox" Width="280" MinHeight="30" Padding="6,5"
+    <TextBox x:Name="SearchBox" Width="170" MinHeight="30" Padding="6,5"
              Text="{Binding Query}" PlaceholderText="Search"
              ToolTip.Tip="Search this PDF, open tabs, or a folder">
       <TextBox.InnerLeftContent>

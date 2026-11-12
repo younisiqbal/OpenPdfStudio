@@ -15,8 +15,9 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 - Open PDF files, including password-protected documents. Drag one or more PDFs onto the window to open them.
 - New Task home screen: a Recent/Starred sidebar and task cards for opening, organizing, splitting, merging, and commenting on PDFs.
 - Open several documents at once in tabs.
+- Document view with a two-row command bar: New Task, Open, Save, Print, page navigation, zoom, rotate, undo, and the Select, Hand, and Snapshot tools on top, and the comment tools below. Draw, Picture, Erase, Signature, and Redact are shown as coming soon.
 - Three page layouts from the bottom bar: continuous scroll, single page, and two pages side by side (the first page on its own, like a book cover). In single-page layout, scrolling past the end of a page turns to the next one. The layout you pick is remembered.
-- A side panel with page thumbnails and a Bookmarks tab. The Bookmarks tab shows the PDF's own outline and your bookmarks. Add a bookmark from the panel or from the popup that appears when you select text. PDFium can't write outline entries, so your bookmarks are kept by OpenPdfStudio for each file (in `bookmarks.json` in the app's local data folder) rather than in the PDF.
+- A side panel with page thumbnails and bookmarks, opened from the Pages and Bookmarks icons on the left strip (the strip's search icon opens Find). The Bookmarks panel shows the PDF's own outline and your bookmarks. Add a bookmark from the panel or from the popup that appears when you select text. PDFium can't write outline entries, so your bookmarks are kept by OpenPdfStudio for each file (in `bookmarks.json` in the app's local data folder) rather than in the PDF.
 - Zoom from 25% to 400%, plus fit width, fit page, and actual size.
 - Rotate the page view.
 - Hand tool for panning, with a choice of cursor styles.
@@ -28,14 +29,14 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 - Save (Ctrl+S) and Save As (Ctrl+Shift+S) keep pasted changes. A dot on the tab marks unsaved changes, and you are asked before a modified file is closed.
 - Read Mode (Ctrl+H) and Full Screen (F11) hide the menus, tabs, toolbars, and thumbnails. Press Esc to leave.
 - Print (Ctrl+P) with a choice of printer, copies, page range, and orientation. Printing uses the Windows print system on Windows and CUPS (`lp`) on Linux and macOS.
-- Rulers along the top and left of the page that measure the current page in inches or centimeters. Turn them on from the Ruler button in the left toolbar, View > Ruler, or Ctrl+R, and right-click a ruler to change the unit.
+- Rulers along the top and left of the page that measure the current page in inches or centimeters. Turn them on from View > Ruler or Ctrl+R, and right-click a ruler to change the unit.
 - Find box (Ctrl+F) in the top-right corner of the page. It highlights every match, steps through them with Previous and Next, and has a gear menu with Whole Words Only, Case Sensitive, Include Page Text, Include Bookmarks, Include Comments, and Highlight All Text.
-- Search box in the tab row with recently used searches, Show matching text results, Advanced Search, and Search & Highlight.
+- Search box at the right of the command bar with recently used searches, Show matching text results, Advanced Search, and Search & Highlight.
 - Advanced Search panel. Search the current document, all open documents, or a folder of PDFs. Match the exact phrase, any of the words, or all of the words. Optionally include bookmarks, comments, and attachment names, and use stemming to find other forms of a word. Results are grouped by file, and clicking one jumps to the match.
-- Organize pages (Edit > Organize, or Organize > Organize pages) right in the document tab: the page area opens into every page at once. Drag pages to reorder them, rotate or delete them, and insert blank pages (sized like the page before). Select with a click, Ctrl or Shift-click, a box dragged with the mouse, or the arrow keys (Shift extends). Switch between grid and list views and small, medium, or large thumbnails. Nothing changes until Apply; Esc cancels. Rotation and new pages are written into the PDF and kept when you save.
+- Organize pages (Tools > Organize pages) right in the document tab: the page area opens into every page at once. Drag pages to reorder them, rotate or delete them, and insert blank pages (sized like the page before). Select with a click, Ctrl or Shift-click, a box dragged with the mouse, or the arrow keys (Shift extends). Switch between grid and list views and small, medium, or large thumbnails. Nothing changes until Apply; Esc cancels. Rotation and new pages are written into the PDF and kept when you save.
 - Split a PDF into one file per page, or one file per page range (for example `1-3; 4-7; 8-`).
 - Merge several PDFs into one, in the order you choose. Password-protected files ask for their password.
-- Settings (File > Settings, or the Settings button in the left toolbar) for theme, default page layout, hand cursor, ruler, comment tools, and the ribbon.
+- Settings (File > Settings) for theme, default page layout, hand cursor, ruler, comment tools, and the ribbon.
 - Help menu with links to the documentation and the issue tracker, and an About box.
 - Themes: Dark, Light, System, Midnight, and High Contrast.
 

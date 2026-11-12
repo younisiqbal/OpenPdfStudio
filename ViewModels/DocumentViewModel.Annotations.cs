@@ -42,7 +42,7 @@ public partial class DocumentViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNoteTool), nameof(IsTypewriterTool), nameof(IsTextboxTool),
         nameof(IsHighlightTool), nameof(IsUnderlineTool), nameof(IsStrikeOutTool),
-        nameof(IsSquigglyTool), nameof(HasAnnotationTool), nameof(IsMarkupTool))]
+        nameof(IsSquigglyTool), nameof(IsLineMarkupTool), nameof(HasAnnotationTool), nameof(IsMarkupTool))]
     private AnnotationTool _annotationTool = AnnotationTool.None;
 
     [ObservableProperty]
@@ -65,6 +65,7 @@ public partial class DocumentViewModel
     public bool IsUnderlineTool => AnnotationTool == AnnotationTool.Underline;
     public bool IsStrikeOutTool => AnnotationTool == AnnotationTool.StrikeOut;
     public bool IsSquigglyTool => AnnotationTool == AnnotationTool.Squiggly;
+    public bool IsLineMarkupTool => IsUnderlineTool || IsStrikeOutTool || IsSquigglyTool;
     public bool HasAnnotationTool => AnnotationTool != AnnotationTool.None;
     public bool IsMarkupTool => AnnotationTool.IsMarkup();
     public bool IsFreetextTool => AnnotationTool is AnnotationTool.Typewriter or AnnotationTool.Textbox;
