@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:OpenPdfStudio.ViewModels"
              xmlns:models="using:OpenPdfStudio.Models"
+             xmlns:themes="using:OpenPdfStudio.Themes"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
@@ -32,6 +33,30 @@
       <Setter Property="Background" Value="{DynamicResource HomeSidebarBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource HomeCardBorderBrush}" />
       <Setter Property="BorderThickness" Value="0,0,1,0" />
+    </Style>
+
+    <Style Selector="Border.sidebarHeader">
+      <Setter Property="BorderBrush" Value="{DynamicResource HomeCardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+
+    <Style Selector="Button.hamburger">
+      <Setter Property="Padding" Value="8" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.hamburger /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+    </Style>
+    <Style Selector="Button.hamburger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource HomeRowHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+    </Style>
+    <Style Selector="Button.hamburger PathIcon">
+      <Setter Property="Width" Value="18" />
+      <Setter Property="Height" Value="18" />
     </Style>
 
     <!-- Recent / Starred switch -->
@@ -199,8 +224,73 @@
 
     <!-- Recent / Starred sidebar -->
     <Border Classes="homeSidebar">
-      <DockPanel Margin="14,18,14,12">
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6,0,0,12">
+      <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="sidebarHeader" Padding="10,10,14,10">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="hamburger" ToolTip.Tip="Menu"
+                    x:DataType="vm:MainViewModel"
+                    DataContext="{Binding $parent[Window].DataContext}">
+              <PathIcon Data="{StaticResource MenuIcon}" />
+              <Button.Flyout>
+                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                  <MenuItem Header="_Open..." InputGesture="Ctrl+O" Command="{Binding OpenFileCommand}" />
+                  <MenuItem Header="Use as _default PDF app" Command="{Binding MakeDefaultPdfAppCommand}" />
+                  <MenuItem Header="Se_ttings..." Command="{Binding OpenSettingsCommand}" />
+                  <Separator />
+                  <MenuItem Header="T_heme">
+                    <MenuItem Header="Dark" Command="{Binding SetThemeCommand}"
+                              CommandParameter="{x:Static themes:AppTheme.Dark}">
+                      <MenuItem.Icon>
+                        <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                  IsVisible="{Binding IsDarkTheme}" />
+                      </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Light" Command="{Binding SetThemeCommand}"
+                              CommandParameter="{x:Static themes:AppTheme.Light}">
+                      <MenuItem.Icon>
+                        <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                  IsVisible="{Binding IsLightTheme}" />
+                      </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="System" Command="{Binding SetThemeCommand}"
+                              CommandParameter="{x:Static themes:AppTheme.System}">
+                      <MenuItem.Icon>
+                        <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                  IsVisible="{Binding IsSystemTheme}" />
+                      </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem Header="Midnight" Command="{Binding SetThemeCommand}"
+                              CommandParameter="{x:Static themes:AppTheme.Midnight}">
+                      <MenuItem.Icon>
+                        <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                  IsVisible="{Binding IsMidnightTheme}" />
+                      </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="High Contrast" Command="{Binding SetThemeCommand}"
+                              CommandParameter="{x:Static themes:AppTheme.HighContrast}">
+                      <MenuItem.Icon>
+                        <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                  IsVisible="{Binding IsHighContrastTheme}" />
+                      </MenuItem.Icon>
+                    </MenuItem>
+                  </MenuItem>
+                  <MenuItem Header="_Help">
+                    <MenuItem Header="_Documentation" Command="{Binding OpenDocumentationCommand}" />
+                    <MenuItem Header="_Report an issue" Command="{Binding ReportIssueCommand}" />
+                    <Separator />
+                    <MenuItem Header="_About OpenPdfStudio" Command="{Binding ShowAboutCommand}" />
+                  </MenuItem>
+                  <Separator />
+                  <MenuItem Header="E_xit" InputGesture="Alt+F4" Command="{Binding ExitCommand}" />
+                </MenuFlyout>
+              </Button.Flyout>
+            </Button>
+            <TextBlock Text="New Task" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,14,14,10">
           <Button Classes="sidebarTab" Classes.active="{Binding !IsStarredSidebar}"
                   Content="Recent files" Command="{Binding ShowRecentSidebarCommand}" />
           <Button Classes="sidebarTab" Classes.active="{Binding IsStarredSidebar}"
@@ -212,9 +302,9 @@
                 Command="{Binding ClearRecentCommand}"
                 IsVisible="{Binding !IsStarredSidebar}"
                 IsEnabled="{Binding HasRecentFiles}"
-                Margin="0,8,0,0" />
+                Margin="14,8,14,12" />
 
-        <Panel IsVisible="{Binding !IsStarredSidebar}">
+        <Panel IsVisible="{Binding !IsStarredSidebar}" Margin="10,0">
           <StackPanel Spacing="4" VerticalAlignment="Center" Margin="8"
                       IsVisible="{Binding !HasRecentFiles}">
             <TextBlock Text="No recent files" FontWeight="SemiBold" HorizontalAlignment="Center" />
@@ -229,7 +319,7 @@
                    DoubleTapped="OnRecentFileDoubleTapped" />
         </Panel>
 
-        <Panel IsVisible="{Binding IsStarredSidebar}">
+        <Panel IsVisible="{Binding IsStarredSidebar}" Margin="10,0">
           <StackPanel Spacing="4" VerticalAlignment="Center" Margin="8"
                       IsVisible="{Binding !HasStarredFiles}">
             <TextBlock Text="No starred files" FontWeight="SemiBold" HorizontalAlignment="Center" />

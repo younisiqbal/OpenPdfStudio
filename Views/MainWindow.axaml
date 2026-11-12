@@ -52,7 +52,7 @@
 
   <DockPanel>
 
-    <Menu DockPanel.Dock="Top" IsVisible="{Binding IsChromeVisible}">
+    <Menu DockPanel.Dock="Top" IsVisible="{Binding ShowAppMenu}">
       <MenuItem Header="_File">
         <MenuItem Header="_Open..." InputGesture="Ctrl+O" Command="{Binding OpenFileCommand}" />
         <MenuItem Header="Open _Recent">
@@ -156,13 +156,14 @@
     </Border>
 
     <Border DockPanel.Dock="Top"
-            IsVisible="{Binding IsChromeVisible}"
+            IsVisible="{Binding ShowTabStrip}"
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,0,1"
             Padding="10,6,10,0">
       <DockPanel>
       <views:TopSearchBox DockPanel.Dock="Right" DataContext="{Binding TopSearch}"
+                          IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).ShowTopSearch}"
                           VerticalAlignment="Center" Margin="12,0,0,6" />
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
         <StackPanel Orientation="Horizontal" Spacing="2">
@@ -199,6 +200,7 @@
           <Button Classes="ghost"
                   ToolTip.Tip="Open a PDF (Ctrl+O)"
                   Command="{Binding OpenFileCommand}"
+                  IsVisible="{Binding ShowTopSearch}"
                   VerticalAlignment="Center"
                   Margin="4,0,0,4">
             <PathIcon Data="{StaticResource PlusIcon}" Width="12" Height="12" />
@@ -211,7 +213,7 @@
     <views:RibbonBar DockPanel.Dock="Top" IsVisible="{Binding ShowRibbon}" />
 
     <Border DockPanel.Dock="Left"
-            IsVisible="{Binding IsChromeVisible}"
+            IsVisible="{Binding ShowRail}"
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,1,0"

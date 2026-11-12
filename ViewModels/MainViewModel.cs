@@ -28,7 +28,8 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private ViewModelBase _currentPage;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsHomeActive), nameof(HasActiveDocument), nameof(ShowRibbon), nameof(ShowRailDivider))]
+    [NotifyPropertyChangedFor(nameof(IsHomeActive), nameof(HasActiveDocument), nameof(ShowRibbon), nameof(ShowRailDivider),
+        nameof(ShowAppMenu), nameof(ShowRail), nameof(ShowTopSearch), nameof(ShowTabStrip))]
     [NotifyCanExecuteChangedFor(nameof(ZoomInCommand), nameof(ZoomOutCommand), nameof(FitWidthCommand),
         nameof(FitPageCommand), nameof(CloseActiveTabCommand), nameof(CopySelectionCommand),
         nameof(FindCommand), nameof(FindNextCommand), nameof(FindPreviousCommand), nameof(ToggleRulerCommand),
@@ -39,12 +40,14 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>Read Mode: the document fills the window with menus, tabs, rail and status bar hidden.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowRibbon))]
+    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowRibbon),
+        nameof(ShowAppMenu), nameof(ShowRail), nameof(ShowTabStrip))]
     private bool _isReadMode;
 
     /// <summary>Full Screen: like Read Mode, and the window covers the whole screen.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowRibbon))]
+    [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowRibbon),
+        nameof(ShowAppMenu), nameof(ShowRail), nameof(ShowTabStrip))]
     private bool _isFullScreen;
 
     [ObservableProperty]
@@ -79,6 +82,12 @@ public partial class MainViewModel : ViewModelBase
     public bool IsHomeActive => ActiveDocument is null;
     public bool HasActiveDocument => ActiveDocument is not null;
     public bool ShowRibbon => HasActiveDocument && IsChromeVisible;
+
+    // The home screen has its own sidebar menu, so the app menu, rail and search only show with a document.
+    public bool ShowAppMenu => IsChromeVisible && HasActiveDocument;
+    public bool ShowRail => IsChromeVisible && HasActiveDocument;
+    public bool ShowTopSearch => HasActiveDocument;
+    public bool ShowTabStrip => IsChromeVisible && (HasActiveDocument || Documents.Count > 0);
     public bool IsRibbonExpanded => !IsRibbonCollapsed;
     public bool IsHomeTab => SelectedRibbonTab == RibbonTab.Home;
     public bool IsEditTab => SelectedRibbonTab == RibbonTab.Edit;
@@ -144,6 +153,7 @@ public partial class MainViewModel : ViewModelBase
             OpenAndGetDocumentAsync, s => Status = s);
         TopSearch = new TopSearchViewModel(() => ActiveDocument, AdvancedSearch, s => Status = s);
         _currentPage = Home;
+        Documents.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ShowTabStrip));
         ApplyTheme(LoadSavedTheme());
     }
 
