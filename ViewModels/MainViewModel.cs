@@ -29,7 +29,7 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsHomeActive), nameof(HasActiveDocument), nameof(ShowDocumentToolbar), nameof(ShowRailDivider),
-        nameof(ShowAppMenu), nameof(ShowTabStrip))]
+        nameof(ShowStatusBar), nameof(ShowTabStrip))]
     [NotifyCanExecuteChangedFor(nameof(ZoomInCommand), nameof(ZoomOutCommand), nameof(FitWidthCommand),
         nameof(FitPageCommand), nameof(CloseActiveTabCommand), nameof(CopySelectionCommand),
         nameof(FindCommand), nameof(FindNextCommand), nameof(FindPreviousCommand), nameof(ToggleRulerCommand),
@@ -41,23 +41,22 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Read Mode: the document fills the window with menus, tabs, rail and status bar hidden.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowDocumentToolbar),
-        nameof(ShowAppMenu), nameof(ShowTabStrip))]
+        nameof(ShowStatusBar), nameof(ShowTabStrip))]
     private bool _isReadMode;
 
     /// <summary>Full Screen: like Read Mode, and the window covers the whole screen.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPresenting), nameof(IsChromeVisible), nameof(ShowDocumentToolbar),
-        nameof(ShowAppMenu), nameof(ShowTabStrip))]
+        nameof(ShowStatusBar), nameof(ShowTabStrip))]
     private bool _isFullScreen;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsHomeTab), nameof(IsEditTab), nameof(IsCommentTab), nameof(IsViewTab),
-        nameof(IsHomeRibbon), nameof(IsEditRibbon), nameof(IsCommentRibbon), nameof(IsViewRibbon))]
+        nameof(IsProtectTab), nameof(IsHelpTab))]
     private RibbonTab _selectedRibbonTab = RibbonTab.Home;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsRibbonExpanded), nameof(IsHomeRibbon), nameof(IsEditRibbon),
-        nameof(IsCommentRibbon), nameof(IsViewRibbon))]
+    [NotifyPropertyChangedFor(nameof(IsRibbonExpanded))]
     private bool _isRibbonCollapsed;
 
     [ObservableProperty] private int _pinEpoch;
@@ -83,18 +82,17 @@ public partial class MainViewModel : ViewModelBase
     public bool HasActiveDocument => ActiveDocument is not null;
     public bool ShowDocumentToolbar => HasActiveDocument && IsChromeVisible;
 
-    // The home screen has its own sidebar menu, so the app menu only shows with a document.
-    public bool ShowAppMenu => IsChromeVisible && HasActiveDocument;
+    // A document has its own bottom bar with page navigation and status, so the window status bar is home-only.
+    public bool ShowStatusBar => IsChromeVisible && IsHomeActive;
+
     public bool ShowTabStrip => IsChromeVisible && (HasActiveDocument || Documents.Count > 0);
     public bool IsRibbonExpanded => !IsRibbonCollapsed;
     public bool IsHomeTab => SelectedRibbonTab == RibbonTab.Home;
     public bool IsEditTab => SelectedRibbonTab == RibbonTab.Edit;
     public bool IsCommentTab => SelectedRibbonTab == RibbonTab.Comment;
     public bool IsViewTab => SelectedRibbonTab == RibbonTab.View;
-    public bool IsHomeRibbon => IsHomeTab && IsRibbonExpanded;
-    public bool IsEditRibbon => IsEditTab && IsRibbonExpanded;
-    public bool IsCommentRibbon => IsCommentTab && IsRibbonExpanded;
-    public bool IsViewRibbon => IsViewTab && IsRibbonExpanded;
+    public bool IsProtectTab => SelectedRibbonTab == RibbonTab.Protect;
+    public bool IsHelpTab => SelectedRibbonTab == RibbonTab.Help;
 
     public IReadOnlyList<RailPinGroup> RailGroups { get; }
 

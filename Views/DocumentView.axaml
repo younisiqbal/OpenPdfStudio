@@ -61,28 +61,32 @@
       <Setter Property="Background" Value="{DynamicResource NavActiveBrush}" />
     </Style>
     <Style Selector="Button.paneStrip">
-      <Setter Property="Width" Value="36" />
-      <Setter Property="Height" Value="36" />
+      <Setter Property="Width" Value="32" />
+      <Setter Property="Height" Value="32" />
       <Setter Property="Padding" Value="0" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="BorderThickness" Value="2,0,0,0" />
+      <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.paneStrip /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource SystemBaseMediumColor}" />
     </Style>
     <Style Selector="Button.paneStrip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#26FFFFFF" />
-      <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}" />
+      <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+      <Setter Property="Foreground" Value="{DynamicResource SystemBaseHighColor}" />
+    </Style>
+    <Style Selector="Button.paneStrip.active">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="Button.paneStrip.active /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#40FFFFFF" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="Button.paneStrip PathIcon">
-      <Setter Property="Width" Value="18" />
-      <Setter Property="Height" Value="18" />
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
     </Style>
     <Style Selector="TextBlock.paneTitle">
       <Setter Property="FontSize" Value="12" />
@@ -97,17 +101,19 @@
       <views:FormatPanel DataContext="{Binding Format}" />
     </Border>
 
-    <Border DockPanel.Dock="Left" Width="44"
+    <Border DockPanel.Dock="Left" Width="34"
             IsVisible="{Binding ShowBottomBar}"
-            Background="{DynamicResource AccentBrush}">
-      <StackPanel Margin="0,8" Spacing="4">
-        <Button Classes="paneStrip" Classes.active="{Binding IsPagesOpen}"
-                Command="{Binding ToggleThumbnailsCommand}" ToolTip.Tip="Pages">
-          <PathIcon Data="{StaticResource OutlineIcon}" />
-        </Button>
+            Background="{DynamicResource SystemChromeLowColor}"
+            BorderBrush="{DynamicResource HairlineBrush}"
+            BorderThickness="0,0,1,0">
+      <StackPanel Margin="0,6" Spacing="2">
         <Button Classes="paneStrip" Classes.active="{Binding IsBookmarksOpen}"
                 Command="{Binding ToggleBookmarksCommand}" ToolTip.Tip="Bookmarks">
           <PathIcon Data="{StaticResource BookmarkIcon}" />
+        </Button>
+        <Button Classes="paneStrip" Classes.active="{Binding IsPagesOpen}"
+                Command="{Binding ToggleThumbnailsCommand}" ToolTip.Tip="Pages">
+          <PathIcon Data="{StaticResource OutlineIcon}" />
         </Button>
         <Button Classes="paneStrip"
                 Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).FindCommand, FallbackValue={x:Null}}"

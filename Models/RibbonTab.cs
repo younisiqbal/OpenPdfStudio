@@ -6,5 +6,7 @@ public enum RibbonTab
     Home,
     Edit,
     Comment,
-    View
+    View,
+    Protect,
+    Help
 }

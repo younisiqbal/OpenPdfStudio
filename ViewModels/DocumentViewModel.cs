@@ -130,7 +130,8 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _pageInput;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsHandTool), nameof(IsSelectTool), nameof(IsSelectAnnotationTool), nameof(IsSnapshotTool))]
+    [NotifyPropertyChangedFor(nameof(IsHandTool), nameof(IsSelectTool), nameof(IsSelectAnnotationTool), nameof(IsAnySelectTool),
+        nameof(IsSnapshotTool))]
     private ViewerTool _tool = ViewerTool.Hand;
 
     [ObservableProperty]
@@ -173,6 +174,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     public string ZoomText => $"{Math.Round(ZoomPercent)}%";
     public bool IsHandTool => Tool == ViewerTool.Hand;
     public bool IsSelectTool => Tool == ViewerTool.Select;
+    public bool IsAnySelectTool => Tool is ViewerTool.Select or ViewerTool.SelectAnnotation;
     public bool IsSnapshotTool => Tool == ViewerTool.Snapshot;
     public int SelectionPageIndex => _selection?.PageIndex ?? -1;
 

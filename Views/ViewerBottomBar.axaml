@@ -51,6 +51,36 @@
           <PathIcon Data="{StaticResource FullscreenIcon}" />
         </Button>
       </StackPanel>
+
+      <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+        <Button Classes="icon" Command="{Binding FirstPageCommand}" ToolTip.Tip="First page">
+          <PathIcon Data="{StaticResource PageFirstIcon}" />
+        </Button>
+        <Button Classes="icon" Command="{Binding PreviousPageCommand}" ToolTip.Tip="Previous page">
+          <PathIcon Data="{StaticResource PagePreviousIcon}" />
+        </Button>
+        <TextBox Text="{Binding PageInput}" Width="44" MinHeight="24" Padding="4,1"
+                 HorizontalContentAlignment="Center" VerticalAlignment="Center" FontSize="12"
+                 ToolTip.Tip="Type a page number and press Enter">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding GoToPageInputCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+        <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center" Margin="4,0">
+          <Run Text="/" />
+          <Run Text="{Binding PageCount, Mode=OneWay}" />
+        </TextBlock>
+        <Button Classes="icon" Command="{Binding NextPageCommand}" ToolTip.Tip="Next page">
+          <PathIcon Data="{StaticResource PageNextIcon}" />
+        </Button>
+        <Button Classes="icon" Command="{Binding LastPageCommand}" ToolTip.Tip="Last page">
+          <PathIcon Data="{StaticResource PageLastIcon}" />
+        </Button>
+      </StackPanel>
+
+      <TextBlock FontSize="12" Margin="16,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                 Classes="muted"
+                 Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Status, FallbackValue=''}" />
     </DockPanel>
   </Border>
 </UserControl>

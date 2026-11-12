@@ -9,7 +9,7 @@
         x:Class="OpenPdfStudio.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/app-logo.ico"
-        Title="{Binding ActiveDocument.FileName, StringFormat='OpenPdfStudio - {0}', FallbackValue=OpenPdfStudio, TargetNullValue=OpenPdfStudio}"
+        Title="{Binding ActiveDocument.FileName, StringFormat='{}{0} - OpenPdfStudio', FallbackValue=OpenPdfStudio, TargetNullValue=OpenPdfStudio}"
         Width="1100" Height="700"
         MinWidth="800" MinHeight="500"
         ExtendClientAreaToDecorationsHint="True"
@@ -67,11 +67,71 @@
       <Setter Property="Foreground" Value="{DynamicResource TitleBarForegroundBrush}" />
     </Style>
     <Style Selector="Button.caption:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#26FFFFFF" />
+      <Setter Property="Background" Value="{DynamicResource CaptionHoverBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource TitleBarForegroundBrush}" />
     </Style>
     <Style Selector="Button.caption:pressed /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#40FFFFFF" />
+      <Setter Property="Background" Value="{DynamicResource CaptionPressedBrush}" />
+    </Style>
+    <Style Selector="Button.docTab">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Padding" Value="10,2,4,2" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="BorderThickness" Value="0,2,0,0" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.docTab:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+    </Style>
+    <Style Selector="Button.docTab.active">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.docTab.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SystemRegionColor}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.docTab Button.tabClose">
+      <Setter Property="Width" Value="18" />
+      <Setter Property="Height" Value="18" />
+    </Style>
+    <Style Selector="Button.quick">
+      <Setter Property="Width" Value="30" />
+      <Setter Property="Height" Value="28" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.quick /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource TitleBarForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.quick:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource CaptionHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TitleBarForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.quick:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource CaptionPressedBrush}" />
+    </Style>
+    <Style Selector="Button.quick:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource TitleBarForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.quick:disabled">
+      <Setter Property="Opacity" Value="0.4" />
+    </Style>
+    <Style Selector="Button.quick PathIcon">
+      <Setter Property="Width" Value="15" />
+      <Setter Property="Height" Value="15" />
+    </Style>
+    <Style Selector="Button.quick PathIcon.chevron">
+      <Setter Property="Width" Value="7" />
+      <Setter Property="Height" Value="7" />
     </Style>
     <Style Selector="Button.caption.close:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="#C42B1C" />
@@ -92,8 +152,84 @@
     <Border x:Name="TitleBar" DockPanel.Dock="Top" Height="36"
             Background="{DynamicResource TitleBarBrush}"
             IsVisible="{Binding !IsFullScreen}">
-      <DockPanel>
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+      <Grid ColumnDefinitions="Auto,*,Auto,*,Auto">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="1" Margin="8,0,4,0"
+                    IsVisible="{Binding HasActiveDocument}">
+          <Button Classes="quick" Command="{Binding OpenFileCommand}" ToolTip.Tip="Open (Ctrl+O)">
+            <PathIcon Data="{StaticResource FolderIcon}" />
+          </Button>
+          <Button Classes="quick" Command="{Binding SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
+            <PathIcon Data="{StaticResource SaveIcon}" />
+          </Button>
+          <Button Classes="quick" Command="{Binding PrintCommand}" ToolTip.Tip="Print (Ctrl+P)">
+            <PathIcon Data="{StaticResource PrintIcon}" />
+          </Button>
+          <Button Classes="quick" Command="{Binding ActiveDocument.UndoCommand, FallbackValue={x:Null}}" ToolTip.Tip="Undo (Ctrl+Z)">
+            <PathIcon Data="{StaticResource UndoIcon}" />
+          </Button>
+          <Button Classes="quick" Command="{Binding ActiveDocument.RedoCommand, FallbackValue={x:Null}}" ToolTip.Tip="Redo (Ctrl+Y)">
+            <PathIcon Data="{StaticResource RedoIcon}" />
+          </Button>
+          <Button Classes="quick" Width="40" ToolTip.Tip="Hand or Select tool">
+            <Button.Flyout>
+              <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                <MenuItem Header="Hand tool" Command="{Binding ActiveDocument.UseHandToolCommand, FallbackValue={x:Null}}">
+                  <MenuItem.Icon>
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                              IsVisible="{Binding ActiveDocument.IsHandTool, FallbackValue=False}" />
+                  </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Select text" Command="{Binding ActiveDocument.UseSelectToolCommand, FallbackValue={x:Null}}">
+                  <MenuItem.Icon>
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                              IsVisible="{Binding ActiveDocument.IsSelectTool, FallbackValue=False}" />
+                  </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Select annotation" Command="{Binding ActiveDocument.UseSelectAnnotationToolCommand, FallbackValue={x:Null}}">
+                  <MenuItem.Icon>
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                              IsVisible="{Binding ActiveDocument.IsSelectAnnotationTool, FallbackValue=False}" />
+                  </MenuItem.Icon>
+                </MenuItem>
+              </MenuFlyout>
+            </Button.Flyout>
+            <StackPanel Orientation="Horizontal" Spacing="3">
+              <Panel>
+                <PathIcon Data="{StaticResource HandIcon}" IsVisible="{Binding !ActiveDocument.IsSelectTool, FallbackValue=True}" />
+                <PathIcon Data="{StaticResource SelectIcon}" IsVisible="{Binding ActiveDocument.IsSelectTool, FallbackValue=False}" />
+              </Panel>
+              <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+
+        <Border Grid.Column="1" x:Name="TitleDragArea" Background="Transparent"
+                PointerPressed="OnTitleBarPointerPressed"
+                DoubleTapped="OnTitleBarDoubleTapped">
+          <Panel>
+            <TextBlock Text="OpenPdfStudio" IsVisible="{Binding IsHomeActive}"
+                       Margin="16,0,0,0" VerticalAlignment="Center"
+                       FontSize="15" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TitleBarForegroundBrush}"
+                       IsHitTestVisible="False" />
+            <TextBlock Text="{Binding ActiveDocument.FileName, StringFormat='{}{0} - OpenPdfStudio', FallbackValue=''}"
+                       IsVisible="{Binding HasActiveDocument}"
+                       Margin="12,0,12,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                       FontSize="12"
+                       Foreground="{DynamicResource TitleBarForegroundBrush}"
+                       IsHitTestVisible="False" />
+          </Panel>
+        </Border>
+
+        <views:TopSearchBox Grid.Column="2" DataContext="{Binding TopSearch}"
+                            IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).HasActiveDocument}"
+                            VerticalAlignment="Center" />
+
+        <Border Grid.Column="3" x:Name="TitleDragAreaRight" Background="Transparent"
+                PointerPressed="OnTitleBarPointerPressed"
+                DoubleTapped="OnTitleBarDoubleTapped" />
+
+        <StackPanel Grid.Column="4" Orientation="Horizontal">
           <Button Classes="caption" Click="OnMinimizeClick" ToolTip.Tip="Minimize">
             <PathIcon Data="{StaticResource CaptionMinimizeIcon}" />
           </Button>
@@ -107,184 +243,50 @@
             <PathIcon Data="{StaticResource CaptionCloseIcon}" />
           </Button>
         </StackPanel>
-        <Border x:Name="TitleDragArea" Background="Transparent"
-                PointerPressed="OnTitleBarPointerPressed"
-                DoubleTapped="OnTitleBarDoubleTapped">
-          <TextBlock Text="{Binding ActiveDocument.FileName, StringFormat='OpenPdfStudio - {0}', FallbackValue=OpenPdfStudio, TargetNullValue=OpenPdfStudio}"
-                     Margin="16,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                     FontSize="15" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TitleBarForegroundBrush}"
-                     IsHitTestVisible="False" />
-        </Border>
-      </DockPanel>
+      </Grid>
     </Border>
 
-    <Menu DockPanel.Dock="Top" IsVisible="{Binding ShowAppMenu}">
-      <MenuItem Header="_File">
-        <MenuItem Header="_Open..." InputGesture="Ctrl+O" Command="{Binding OpenFileCommand}" />
-        <MenuItem Header="Open _Recent">
-          <MenuItem Header="Clear recent files" Command="{Binding Home.ClearRecentCommand}" />
-        </MenuItem>
-        <MenuItem Header="_Close tab" InputGesture="Ctrl+W" Command="{Binding CloseActiveTabCommand}" />
-        <Separator />
-        <MenuItem Header="_Save" InputGesture="Ctrl+S" Command="{Binding SaveCommand}" />
-        <MenuItem Header="Save _As..." InputGesture="Ctrl+Shift+S" Command="{Binding SaveAsCommand}" />
-        <Separator />
-        <MenuItem Header="_Print..." InputGesture="Ctrl+P" Command="{Binding PrintCommand}" />
-        <Separator />
-        <MenuItem Header="Use as _default PDF app..." Command="{Binding MakeDefaultPdfAppCommand}" />
-        <MenuItem Header="Se_ttings..." Command="{Binding OpenSettingsCommand}" />
-        <Separator />
-        <MenuItem Header="E_xit" InputGesture="Alt+F4" Command="{Binding ExitCommand}" />
-      </MenuItem>
-      <MenuItem Header="_Edit">
-        <MenuItem Header="_Undo" InputGesture="Ctrl+Z" Command="{Binding ActiveDocument.UndoCommand, FallbackValue={x:Null}}" />
-        <MenuItem Header="_Redo" InputGesture="Ctrl+Y" Command="{Binding ActiveDocument.RedoCommand, FallbackValue={x:Null}}" />
-        <Separator />
-        <MenuItem Header="_Copy" InputGesture="Ctrl+C" Command="{Binding CopySelectionCommand}" />
-        <MenuItem Header="_Paste" InputGesture="Ctrl+V" Command="{Binding PasteCommand}" />
-        <MenuItem Header="Paste in Pla_ce" InputGesture="Ctrl+Alt+V" Command="{Binding PasteInPlaceCommand}" />
-        <Separator />
-        <MenuItem Header="_Find..." InputGesture="Ctrl+F" Command="{Binding FindCommand}" />
-        <MenuItem Header="Find _Next" InputGesture="F3" Command="{Binding FindNextCommand}" />
-        <MenuItem Header="Find _Previous" InputGesture="Shift+F3" Command="{Binding FindPreviousCommand}" />
-        <MenuItem Header="_Advanced Search..." InputGesture="Ctrl+Shift+F" Command="{Binding OpenAdvancedSearchCommand}" />
-      </MenuItem>
-      <MenuItem Header="_View">
-        <MenuItem Header="Zoom _In" InputGesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
-        <MenuItem Header="Zoom _Out" InputGesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
-        <MenuItem Header="_Actual Size" InputGesture="Ctrl+1" Command="{Binding ActualSizeCommand}">
-          <MenuItem.Icon>
-            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                      IsVisible="{Binding ActiveDocument.IsActualSize, FallbackValue=False}" />
-          </MenuItem.Icon>
-        </MenuItem>
-        <MenuItem Header="Fit _Page" InputGesture="Ctrl+0" Command="{Binding FitPageCommand}">
-          <MenuItem.Icon>
-            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                      IsVisible="{Binding ActiveDocument.IsFitPage, FallbackValue=False}" />
-          </MenuItem.Icon>
-        </MenuItem>
-        <MenuItem Header="Fit _Width" InputGesture="Ctrl+2" Command="{Binding FitWidthCommand}">
-          <MenuItem.Icon>
-            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                      IsVisible="{Binding ActiveDocument.IsFitWidth, FallbackValue=False}" />
-          </MenuItem.Icon>
-        </MenuItem>
-        <Separator />
-        <MenuItem Header="Rotate _Right" InputGesture="Ctrl+Shift+OemPlus" Command="{Binding RotateClockwiseCommand}" />
-        <Separator />
-        <MenuItem Header="Rea_d Mode" InputGesture="Ctrl+H" Command="{Binding ToggleReadModeCommand}" />
-        <MenuItem Header="_Full Screen" InputGesture="F11" Command="{Binding ToggleFullScreenCommand}" />
-        <Separator />
-        <MenuItem Header="Pa_ges panel" Command="{Binding ActiveDocument.ToggleThumbnailsCommand, FallbackValue={x:Null}}">
-          <MenuItem.Icon>
-            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                      IsVisible="{Binding ActiveDocument.IsPagesOpen, FallbackValue=False}" />
-          </MenuItem.Icon>
-        </MenuItem>
-        <MenuItem Header="_Bookmarks panel" Command="{Binding ActiveDocument.ToggleBookmarksCommand, FallbackValue={x:Null}}">
-          <MenuItem.Icon>
-            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                      IsVisible="{Binding ActiveDocument.IsBookmarksOpen, FallbackValue=False}" />
-          </MenuItem.Icon>
-        </MenuItem>
-        <MenuItem Header="_Ruler" InputGesture="Ctrl+R" Command="{Binding ToggleRulerCommand}">
-          <MenuItem.Icon>
-            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                      IsVisible="{Binding ActiveDocument.IsRulerVisible, FallbackValue=False}" />
-          </MenuItem.Icon>
-        </MenuItem>
-        <Separator />
-        <MenuItem Header="_Theme">
-          <MenuItem Header="Dark" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static themes:AppTheme.Dark}">
-            <MenuItem.Icon>
-              <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsDarkTheme}" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem Header="Light" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static themes:AppTheme.Light}">
-            <MenuItem.Icon>
-              <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsLightTheme}" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem Header="System" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static themes:AppTheme.System}">
-            <MenuItem.Icon>
-              <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsSystemTheme}" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <Separator />
-          <MenuItem Header="Midnight" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static themes:AppTheme.Midnight}">
-            <MenuItem.Icon>
-              <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsMidnightTheme}" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem Header="High Contrast" Command="{Binding SetThemeCommand}" CommandParameter="{x:Static themes:AppTheme.HighContrast}">
-            <MenuItem.Icon>
-              <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12" IsVisible="{Binding IsHighContrastTheme}" />
-            </MenuItem.Icon>
-          </MenuItem>
-        </MenuItem>
-      </MenuItem>
-      <MenuItem Header="_Tools">
-        <MenuItem Header="_Merge PDFs..." Command="{Binding MergePdfsCommand}" />
-        <MenuItem Header="_Split PDF..." Command="{Binding SplitPdfCommand}" />
-        <MenuItem Header="_Organize pages" Command="{Binding OrganizePagesCommand}" />
-        <Separator />
-        <MenuItem Header="_Snapshot" Command="{Binding ActiveDocument.UseSnapshotToolCommand, FallbackValue={x:Null}}" />
-        <Separator />
-        <MenuItem Header="Add _password..." IsEnabled="False" />
-        <MenuItem Header="_Compress..." IsEnabled="False" />
-      </MenuItem>
-      <MenuItem Header="_Help">
-        <MenuItem Header="_Documentation" Command="{Binding OpenDocumentationCommand}" />
-        <MenuItem Header="_Report an issue" Command="{Binding ReportIssueCommand}" />
-        <Separator />
-        <MenuItem Header="_About OpenPdfStudio" Command="{Binding ShowAboutCommand}" />
-      </MenuItem>
-    </Menu>
-
     <Border DockPanel.Dock="Bottom"
-            IsVisible="{Binding IsChromeVisible}"
+            IsVisible="{Binding ShowStatusBar}"
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,1,0,0"
             Padding="14,6">
       <DockPanel>
         <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="11" Text="{Binding Version}" />
-        <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="12" Margin="0,0,24,0"
-                   Text="{Binding ActiveDocument.PageStatus, FallbackValue=''}"
-                   IsVisible="{Binding HasActiveDocument}" />
         <TextBlock FontSize="12" Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
       </DockPanel>
     </Border>
+
+    <views:RibbonBar DockPanel.Dock="Top" IsVisible="{Binding ShowDocumentToolbar}" />
 
     <Border DockPanel.Dock="Top"
             IsVisible="{Binding ShowTabStrip}"
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,0,1"
-            Padding="10,6,10,0">
-      <DockPanel>
+            Padding="4,0">
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-        <StackPanel Orientation="Horizontal" Spacing="2">
+        <StackPanel Orientation="Horizontal" Spacing="1">
+          <Button Classes="docTab" Classes.active="{Binding IsHomeActive}"
+                  Command="{Binding ShowHomeCommand}" ToolTip.Tip="Start: open, organize, split and merge PDFs">
+            <TextBlock Text="Start" Margin="4,0,24,0" VerticalAlignment="Center" />
+          </Button>
           <ItemsControl ItemsSource="{Binding Documents}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="2" />
+                <StackPanel Orientation="Horizontal" Spacing="1" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:DocumentViewModel">
-                <Button Classes="tab" Classes.active="{Binding IsActive}"
+                <Button Classes="docTab" Classes.active="{Binding IsActive}"
                         Command="{Binding ActivateCommand}"
-                        ToolTip.Tip="{Binding FilePath}"
-                        Padding="12,7,6,7">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Border Width="14" Height="17" CornerRadius="2"
-                            Background="{DynamicResource PdfBadgeBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding FileName}" MaxWidth="180"
+                        ToolTip.Tip="{Binding FilePath}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding FileName}" MaxWidth="160"
                                TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                    <Ellipse Width="7" Height="7" Fill="{DynamicResource AccentBrush}"
+                    <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}"
                              VerticalAlignment="Center" IsVisible="{Binding IsModified}"
                              ToolTip.Tip="Unsaved changes" />
                     <Button Classes="tabClose" Command="{Binding CloseCommand}"
@@ -297,20 +299,15 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
 
-          <Button Classes="ghost"
+          <Button Classes="tabClose" Width="24" Height="22" Margin="4,0,0,0"
                   ToolTip.Tip="Open a PDF (Ctrl+O)"
                   Command="{Binding OpenFileCommand}"
-                  IsVisible="{Binding HasActiveDocument}"
-                  VerticalAlignment="Center"
-                  Margin="4,0,0,4">
-            <PathIcon Data="{StaticResource PlusIcon}" Width="12" Height="12" />
+                  VerticalAlignment="Center">
+            <PathIcon Data="{StaticResource PlusIcon}" />
           </Button>
         </StackPanel>
       </ScrollViewer>
-      </DockPanel>
     </Border>
-
-    <views:DocumentCommandBar DockPanel.Dock="Top" IsVisible="{Binding ShowDocumentToolbar}" />
 
     <Panel DockPanel.Dock="Right" IsVisible="{Binding AdvancedSearch.IsOpen}">
       <views:AdvancedSearchPanel DataContext="{Binding AdvancedSearch}" />

@@ -41,6 +41,7 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DropEvent, OnDrop);
 
         WindowDecorationProperties.SetElementRole(TitleDragArea, WindowDecorationsElementRole.TitleBar);
+        WindowDecorationProperties.SetElementRole(TitleDragAreaRight, WindowDecorationsElementRole.TitleBar);
         Opened += (_, _) => UseSquareCorners();
     }
 
