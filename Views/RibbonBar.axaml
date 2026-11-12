@@ -103,34 +103,35 @@
                     <MenuFlyout Placement="BottomEdgeAlignedLeft">
                       <MenuItem Header="Hand tool" Command="{Binding ActiveDocument.UseHandToolCommand}" />
                       <Separator />
-                      <MenuItem Header="Hand cursor" IsEnabled="False" />
-                      <MenuItem Header="Open palm, fist while dragging"
-                                Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="PalmAndFist">
-                        <MenuItem.Icon>
-                          <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                                    IsVisible="{Binding ActiveDocument.IsPalmAndFistCursor, FallbackValue=False}" />
-                        </MenuItem.Icon>
-                      </MenuItem>
-                      <MenuItem Header="Open palm"
-                                Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="Palm">
-                        <MenuItem.Icon>
-                          <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                                    IsVisible="{Binding ActiveDocument.IsPalmCursor, FallbackValue=False}" />
-                        </MenuItem.Icon>
-                      </MenuItem>
-                      <MenuItem Header="Move arrows"
-                                Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="MoveArrows">
-                        <MenuItem.Icon>
-                          <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                                    IsVisible="{Binding ActiveDocument.IsMoveArrowsCursor, FallbackValue=False}" />
-                        </MenuItem.Icon>
-                      </MenuItem>
-                      <MenuItem Header="Pointing finger"
-                                Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="PointingFinger">
-                        <MenuItem.Icon>
-                          <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
-                                    IsVisible="{Binding ActiveDocument.IsPointingFingerCursor, FallbackValue=False}" />
-                        </MenuItem.Icon>
+                      <MenuItem Header="Hand cursor">
+                        <MenuItem Header="Open palm, fist while dragging"
+                                  Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="PalmAndFist">
+                          <MenuItem.Icon>
+                            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                      IsVisible="{Binding ActiveDocument.IsPalmAndFistCursor, FallbackValue=False}" />
+                          </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Open palm"
+                                  Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="Palm">
+                          <MenuItem.Icon>
+                            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                      IsVisible="{Binding ActiveDocument.IsPalmCursor, FallbackValue=False}" />
+                          </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Move arrows"
+                                  Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="MoveArrows">
+                          <MenuItem.Icon>
+                            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                      IsVisible="{Binding ActiveDocument.IsMoveArrowsCursor, FallbackValue=False}" />
+                          </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Pointing finger"
+                                  Command="{Binding ActiveDocument.SetHandCursorStyleCommand}" CommandParameter="PointingFinger">
+                          <MenuItem.Icon>
+                            <PathIcon Data="{StaticResource CheckIcon}" Width="12" Height="12"
+                                      IsVisible="{Binding ActiveDocument.IsPointingFingerCursor, FallbackValue=False}" />
+                          </MenuItem.Icon>
+                        </MenuItem>
                       </MenuItem>
                     </MenuFlyout>
                   </Button.Flyout>
@@ -154,8 +155,9 @@
                     <PathIcon Classes="chevron" Data="{StaticResource ChevronDownIcon}" />
                   </StackPanel>
                 </Button>
-                <Button Classes="tool" Command="{Binding ActiveDocument.ComingSoonCommand}" CommandParameter="Snapshot"
-                        ToolTip.Tip="Snapshot (coming soon)">
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsSnapshotTool, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.UseSnapshotToolCommand}"
+                        ToolTip.Tip="Snapshot: drag a box to copy that area as an image">
                   <StackPanel Spacing="2">
                     <PathIcon Data="{StaticResource SnapshotIcon}" />
                     <TextBlock Text="Snapshot" />
@@ -355,12 +357,20 @@
             <DockPanel Margin="4,0">
               <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Show" />
               <StackPanel Orientation="Horizontal" Spacing="2">
-                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsThumbnailsVisible, FallbackValue=False}"
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsPagesOpen, FallbackValue=False}"
                         Command="{Binding ActiveDocument.ToggleThumbnailsCommand}"
                         ToolTip.Tip="Show or hide page thumbnails">
                   <StackPanel Spacing="2">
                     <PathIcon Data="{StaticResource OutlineIcon}" />
                     <TextBlock Text="Pages" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsBookmarksOpen, FallbackValue=False}"
+                        Command="{Binding ActiveDocument.ToggleBookmarksCommand}"
+                        ToolTip.Tip="Show or hide bookmarks">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource BookmarkIcon}" />
+                    <TextBlock Text="Bookmarks" />
                   </StackPanel>
                 </Button>
                 <Button Classes="tool" Classes.active="{Binding ActiveDocument.IsRulerVisible, FallbackValue=False}"

@@ -10,17 +10,20 @@
     <DockPanel>
 
       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-        <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Print" ToolTip.Tip="Print (coming soon)">
+        <Button Classes="icon" Command="{Binding Shell.Print, FallbackValue={x:Null}}" ToolTip.Tip="Print (Ctrl+P)">
           <PathIcon Data="{StaticResource PrintIcon}" />
         </Button>
         <Border Classes="toolSeparator" Margin="4,4" />
-        <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Single page view" ToolTip.Tip="Single page (coming soon)">
+        <Button Classes="icon" Classes.active="{Binding IsSinglePageLayout}"
+                Command="{Binding SetLayoutCommand}" CommandParameter="SinglePage" ToolTip.Tip="Single page">
           <PathIcon Data="{StaticResource SinglePageIcon}" />
         </Button>
-        <Button Classes="icon active" ToolTip.Tip="Continuous scroll">
+        <Button Classes="icon" Classes.active="{Binding IsContinuousLayout}"
+                Command="{Binding SetLayoutCommand}" CommandParameter="Continuous" ToolTip.Tip="Continuous scroll">
           <PathIcon Data="{StaticResource ContinuousIcon}" />
         </Button>
-        <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Two-page view" ToolTip.Tip="Two pages (coming soon)">
+        <Button Classes="icon" Classes.active="{Binding IsTwoPageLayout}"
+                Command="{Binding SetLayoutCommand}" CommandParameter="TwoPage" ToolTip.Tip="Two pages">
           <PathIcon Data="{StaticResource TwoPageIcon}" />
         </Button>
         <Border Classes="toolSeparator" Margin="4,4" />
@@ -48,7 +51,7 @@
             </MenuFlyout>
           </Button.Flyout>
         </Button>
-        <Button Classes="icon" Command="{Binding ComingSoonCommand}" CommandParameter="Full screen" ToolTip.Tip="Full screen (coming soon)">
+        <Button Classes="icon" Command="{Binding Shell.FullScreen, FallbackValue={x:Null}}" ToolTip.Tip="Full screen (F11)">
           <PathIcon Data="{StaticResource FullscreenIcon}" />
         </Button>
       </StackPanel>

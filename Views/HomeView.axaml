@@ -79,38 +79,38 @@
       <StackPanel Spacing="12">
         <TextBlock Classes="section" Text="Quick tools" />
         <UniformGrid Columns="3">
-          <Border Classes="card tool" Margin="0,0,10,10" MinHeight="112">
+          <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="112"
+                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).MergePdfsCommand}">
             <StackPanel Spacing="6">
               <TextBlock Text="Merge PDFs" FontWeight="SemiBold" />
               <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
                          Text="Combine several files into one document." />
-              <TextBlock Classes="hint" Text="Coming soon" />
             </StackPanel>
-          </Border>
-          <Border Classes="card tool" Margin="0,0,10,10" MinHeight="112">
+          </Button>
+          <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="112"
+                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SplitPdfCommand}">
             <StackPanel Spacing="6">
               <TextBlock Text="Split PDF" FontWeight="SemiBold" />
               <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
                          Text="Break a file into separate pages or ranges." />
-              <TextBlock Classes="hint" Text="Coming soon" />
             </StackPanel>
-          </Border>
-          <Border Classes="card tool" Margin="0,0,0,10" MinHeight="112">
+          </Button>
+          <Button Classes="toolCard" Margin="0,0,0,10" MinHeight="112"
+                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OrganizePagesCommand}">
             <StackPanel Spacing="6">
               <TextBlock Text="Organize pages" FontWeight="SemiBold" />
               <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
                          Text="Reorder, rotate, and delete pages." />
-              <TextBlock Classes="hint" Text="Coming soon" />
             </StackPanel>
-          </Border>
-          <Border Classes="card tool" Margin="0,0,10,0" MinHeight="112">
+          </Button>
+          <Button Classes="toolCard" Margin="0,0,10,0" MinHeight="112"
+                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).StartCommentingCommand}">
             <StackPanel Spacing="6">
               <TextBlock Text="Add comments" FontWeight="SemiBold" />
               <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                         Text="Highlight, draw, and add notes." />
-              <TextBlock Classes="hint" Text="Coming soon" />
+                         Text="Highlight text, and add notes and text boxes." />
             </StackPanel>
-          </Border>
+          </Button>
           <Border Classes="card tool" Margin="0,0,10,0" MinHeight="112">
             <StackPanel Spacing="6">
               <TextBlock Text="Protect" FontWeight="SemiBold" />

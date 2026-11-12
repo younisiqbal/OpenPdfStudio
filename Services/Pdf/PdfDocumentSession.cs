@@ -48,7 +48,7 @@ public sealed partial class PdfDocumentSession : IDisposable
     private readonly PdfiumWorker _worker;
     private readonly FpdfDocumentT _document;
     private readonly IntPtr _buffer;
-    private readonly Size[] _pageSizes;
+    private Size[] _pageSizes;
     private readonly Dictionary<int, TextPage> _textPages = new();
     private readonly LinkedList<int> _textPageOrder = new();
     private readonly Dictionary<int, string> _pageTexts = new();
@@ -82,6 +82,14 @@ public sealed partial class PdfDocumentSession : IDisposable
             ThrowIfDisposed();
             return PdfPageRenderer.Render(_document, pageIndex, pixelWidth, pixelHeight);
         }, cancellationToken, lowPriority);
+
+    /// <summary>Renders a rectangle of a page, given in points, at <paramref name="pixelsPerPoint"/>.</summary>
+    public Task<PdfImageData> RenderRegionAsync(int pageIndex, Rect region, double pixelsPerPoint) =>
+        _worker.InvokeAsync(() =>
+        {
+            ThrowIfDisposed();
+            return PdfPageRenderer.RenderRegion(_document, pageIndex, _pageSizes[pageIndex], region, pixelsPerPoint);
+        });
 
     /// <summary>Returns the character index under a point, or -1 when there is no text there.</summary>
     public Task<int> HitTestCharAsync(int pageIndex, Point point, double tolerance = HitTolerance) =>
@@ -335,25 +343,32 @@ public sealed partial class PdfDocumentSession : IDisposable
         _worker.InvokeAsync(() =>
         {
             ThrowIfDisposed();
-            var fullPath = Path.GetFullPath(path);
-            var temp = Path.Combine(Path.GetDirectoryName(fullPath)!, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
-
-            try
-            {
-                using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write))
-                    PdfSaver.Save(_document, stream);
-
-                File.Move(temp, fullPath, overwrite: true);
-            }
-            catch
-            {
-                try { File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
-                throw;
-            }
-
+            var fullPath = WriteAtomically(_document, path);
             if (adoptPath)
                 FilePath = fullPath;
         });
+
+    /// <summary>Writes next to the target first and then moves over it, so a failed save never leaves a half-written PDF.</summary>
+    private static string WriteAtomically(FpdfDocumentT document, string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var temp = Path.Combine(Path.GetDirectoryName(fullPath)!, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write))
+                PdfSaver.Save(document, stream);
+
+            File.Move(temp, fullPath, overwrite: true);
+        }
+        catch
+        {
+            try { File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            throw;
+        }
+
+        return fullPath;
+    }
 
     /// <summary>Renders a page into a BGRA buffer for printing. Form fields and annotations are included.</summary>
     public Task<byte[]> RenderForPrintAsync(int pageIndex, int pixelWidth, int pixelHeight, CancellationToken cancellationToken) =>
@@ -434,6 +449,11 @@ public sealed partial class PdfDocumentSession : IDisposable
             };
         }
 
+        return new PdfDocumentSession(worker, filePath, document!, buffer, ReadPageSizes(document!));
+    }
+
+    private static Size[] ReadPageSizes(FpdfDocumentT document)
+    {
         var pageCount = Math.Max(fpdfview.FPDF_GetPageCount(document), 0);
         var sizes = new Size[pageCount];
         for (int i = 0; i < pageCount; i++)
@@ -443,7 +463,7 @@ public sealed partial class PdfDocumentSession : IDisposable
             sizes[i] = new Size(width > 0 ? width : 612, height > 0 ? height : 792);
         }
 
-        return new PdfDocumentSession(worker, filePath, document!, buffer, sizes);
+        return sizes;
     }
 
     private TextPage GetTextPage(int pageIndex)

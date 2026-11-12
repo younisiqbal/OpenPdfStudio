@@ -10,6 +10,40 @@
              x:DataType="vm:DocumentViewModel"
              Focusable="True">
 
+  <UserControl.Resources>
+    <DataTemplate x:Key="PageFrameTemplate" x:DataType="vm:PdfPageViewModel">
+      <LayoutTransformControl Classes="pageFrame"
+                              Margin="0,0,0,12"
+                              HorizontalAlignment="Center"
+                              LayoutTransform="{Binding PageTransform}">
+        <Border Width="{Binding DisplayWidth}"
+                Height="{Binding DisplayHeight}"
+                Background="White"
+                BoxShadow="0 2 10 0 #40000000">
+          <Grid>
+            <Image Source="{Binding Bitmap}" Stretch="Fill"
+                   RenderOptions.BitmapInterpolationMode="HighQuality" />
+            <controls:SelectionOverlay Rects="{Binding SearchRects}"
+                                       PageWidthPoints="{Binding WidthPoints}"
+                                       Fill="#59FFD400" />
+            <controls:SelectionOverlay Rects="{Binding CurrentMatchRects}"
+                                       PageWidthPoints="{Binding WidthPoints}"
+                                       Fill="#99FF8C00" />
+            <controls:SelectionOverlay Rects="{Binding SelectionRects}"
+                                       PageWidthPoints="{Binding WidthPoints}" />
+            <controls:AnnotationOverlay Annotations="{Binding Annotations}"
+                                        PageWidthPoints="{Binding WidthPoints}"
+                                        DraftRect="{Binding DraftRect}" />
+            <TextBlock Text="This page could not be rendered."
+                       Foreground="#80000000"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       IsVisible="{Binding HasError}" />
+          </Grid>
+        </Border>
+      </LayoutTransformControl>
+    </DataTemplate>
+  </UserControl.Resources>
+
   <UserControl.Styles>
     <Style Selector="Button.thumb">
       <Setter Property="Background" Value="Transparent" />
@@ -26,6 +60,20 @@
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
       <Setter Property="Background" Value="{DynamicResource NavActiveBrush}" />
     </Style>
+    <Style Selector="Button.sideTab">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Padding" Value="6,5" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="BorderThickness" Value="0,0,0,2" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.sideTab.active">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
   </UserControl.Styles>
 
   <DockPanel>
@@ -35,39 +83,122 @@
     </Border>
 
     <Border DockPanel.Dock="Left"
-            Width="152"
-            IsVisible="{Binding ShowThumbnails}"
+            IsVisible="{Binding ShowSidePanel}"
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,1,0">
-      <ScrollViewer x:Name="ThumbScroller" HorizontalScrollBarVisibility="Disabled">
-        <ItemsControl x:Name="ThumbnailHost" ItemsSource="{Binding Pages}" Margin="0,12">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <VirtualizingStackPanel />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:PdfPageViewModel">
-              <Button Classes="thumb" Classes.current="{Binding IsCurrent}"
-                      Margin="0,0,0,8" Click="OnThumbnailClick"
-                      ToolTip.Tip="{Binding PageNumber, StringFormat='Page {0}'}">
-                <StackPanel Spacing="4">
-                  <LayoutTransformControl HorizontalAlignment="Center" LayoutTransform="{Binding PageTransform}">
-                    <Border Width="{x:Static vm:PdfPageViewModel.ThumbnailWidth}"
-                            Height="{Binding ThumbnailHeight}"
-                            Background="White"
-                            BoxShadow="0 1 4 0 #33000000">
-                      <Image Source="{Binding Thumbnail}" Stretch="Fill" />
-                    </Border>
-                  </LayoutTransformControl>
-                  <TextBlock Text="{Binding PageNumber}" FontSize="11" HorizontalAlignment="Center" />
-                </StackPanel>
-              </Button>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </ScrollViewer>
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*" Margin="6,6,6,0">
+          <Button Grid.Column="0" Classes="sideTab" Classes.active="{Binding ShowThumbnailPane}"
+                  Content="Pages" Command="{Binding ShowPagesTabCommand}" />
+          <Button Grid.Column="1" Classes="sideTab" Classes.active="{Binding ShowBookmarkPane}"
+                  Content="Bookmarks" Command="{Binding ShowBookmarksTabCommand}" />
+        </Grid>
+
+        <Panel>
+          <ScrollViewer Width="152" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding ShowThumbnailPane}">
+            <ItemsControl x:Name="ThumbnailHost" ItemsSource="{Binding Pages}" Margin="0,12">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:PdfPageViewModel">
+                  <Button Classes="thumb" Classes.current="{Binding IsCurrent}"
+                          Margin="0,0,0,8" Click="OnThumbnailClick"
+                          ToolTip.Tip="{Binding PageNumber, StringFormat='Page {0}'}">
+                    <StackPanel Spacing="4">
+                      <LayoutTransformControl HorizontalAlignment="Center" LayoutTransform="{Binding PageTransform}">
+                        <Border Width="{x:Static vm:PdfPageViewModel.ThumbnailWidth}"
+                                Height="{Binding ThumbnailHeight}"
+                                Background="White"
+                                BoxShadow="0 1 4 0 #33000000">
+                          <Image Source="{Binding Thumbnail}" Stretch="Fill" />
+                        </Border>
+                      </LayoutTransformControl>
+                      <TextBlock Text="{Binding PageNumber}" FontSize="11" HorizontalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <DockPanel Width="240" IsVisible="{Binding ShowBookmarkPane}">
+            <Button DockPanel.Dock="Top" Classes="ghost" Margin="8,8,8,4" HorizontalAlignment="Stretch"
+                    Command="{Binding AddBookmarkCommand}"
+                    ToolTip.Tip="Bookmark the current page, or the selected text">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource BookmarkIcon}" Width="14" Height="14" />
+                <TextBlock Text="Add bookmark" />
+              </StackPanel>
+            </Button>
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+              <StackPanel Margin="4,4,4,12" Spacing="4">
+                <TextBlock Classes="hint" Text="Your bookmarks" Margin="8,6,8,2" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="8,0,8,6"
+                           IsVisible="{Binding !HasUserBookmarks}"
+                           Text="Select text and choose Bookmark, or use Add bookmark. OpenPdfStudio keeps them for this file." />
+                <ItemsControl ItemsSource="{Binding UserBookmarkItems}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BookmarkItemViewModel">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <Button Classes="result"
+                                Command="{Binding $parent[UserControl].((vm:DocumentViewModel)DataContext).OpenBookmarkCommand}"
+                                CommandParameter="{Binding}"
+                                ToolTip.Tip="{Binding Title}">
+                          <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="11" Margin="8,0,0,0"
+                                       Text="{Binding PageLabel}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                          </DockPanel>
+                        </Button>
+                        <Button Grid.Column="1" Classes="icon"
+                                Command="{Binding $parent[UserControl].((vm:DocumentViewModel)DataContext).RemoveBookmarkCommand}"
+                                CommandParameter="{Binding}"
+                                ToolTip.Tip="Remove this bookmark">
+                          <PathIcon Data="{StaticResource CloseIcon}" Width="10" Height="10" />
+                        </Button>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Classes="hint" Text="In this document" Margin="8,12,8,2" />
+                <TextBlock Classes="muted" FontSize="12" Margin="8,0,8,6" Text="Loading..."
+                           IsVisible="{Binding IsOutlineLoading}" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="8,0,8,6"
+                           Text="This PDF has no bookmarks of its own.">
+                  <TextBlock.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                      <Binding Path="!HasOutline" />
+                      <Binding Path="!IsOutlineLoading" />
+                    </MultiBinding>
+                  </TextBlock.IsVisible>
+                </TextBlock>
+                <ItemsControl ItemsSource="{Binding OutlineItems}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BookmarkItemViewModel">
+                      <Button Classes="result" Margin="{Binding Indent}"
+                              IsEnabled="{Binding HasPage}"
+                              Command="{Binding $parent[UserControl].((vm:DocumentViewModel)DataContext).OpenBookmarkCommand}"
+                              CommandParameter="{Binding}"
+                              ToolTip.Tip="{Binding Title}">
+                        <DockPanel>
+                          <TextBlock DockPanel.Dock="Right" Classes="muted" FontSize="11" Margin="8,0,0,0"
+                                     Text="{Binding PageLabel}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </DockPanel>
+        </Panel>
+      </DockPanel>
     </Border>
 
     <Grid x:Name="PageArea" RowDefinitions="Auto,*" ColumnDefinitions="Auto,*">
@@ -187,48 +318,41 @@
             </MenuItem>
           </ContextMenu>
         </ScrollViewer.ContextMenu>
-        <ItemsControl x:Name="PagesHost"
-                      ItemsSource="{Binding Pages}"
-                      Margin="24"
-                      HorizontalAlignment="Center">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <VirtualizingStackPanel />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:PdfPageViewModel">
-              <LayoutTransformControl Margin="0,0,0,12"
-                                      HorizontalAlignment="Center"
-                                      LayoutTransform="{Binding PageTransform}">
-                <Border Width="{Binding DisplayWidth}"
-                        Height="{Binding DisplayHeight}"
-                        Background="White"
-                        BoxShadow="0 2 10 0 #40000000">
-                  <Grid>
-                    <Image Source="{Binding Bitmap}" Stretch="Fill"
-                           RenderOptions.BitmapInterpolationMode="HighQuality" />
-                    <controls:SelectionOverlay Rects="{Binding SearchRects}"
-                                               PageWidthPoints="{Binding WidthPoints}"
-                                               Fill="#59FFD400" />
-                    <controls:SelectionOverlay Rects="{Binding CurrentMatchRects}"
-                                               PageWidthPoints="{Binding WidthPoints}"
-                                               Fill="#99FF8C00" />
-                    <controls:SelectionOverlay Rects="{Binding SelectionRects}"
-                                               PageWidthPoints="{Binding WidthPoints}" />
-                    <controls:AnnotationOverlay Annotations="{Binding Annotations}"
-                                                PageWidthPoints="{Binding WidthPoints}"
-                                                DraftRect="{Binding DraftRect}" />
-                    <TextBlock Text="This page could not be rendered."
-                               Foreground="#80000000"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               IsVisible="{Binding HasError}" />
-                  </Grid>
-                </Border>
-              </LayoutTransformControl>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <Panel>
+          <ItemsControl x:Name="PagesHost"
+                        ItemsSource="{Binding Pages}"
+                        ItemTemplate="{StaticResource PageFrameTemplate}"
+                        IsVisible="{Binding IsContinuousLayout}"
+                        Margin="24"
+                        HorizontalAlignment="Center">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+          <ItemsControl x:Name="SpreadsHost"
+                        ItemsSource="{Binding Spreads}"
+                        IsVisible="{Binding UsesSpreads}"
+                        Margin="24"
+                        HorizontalAlignment="Center">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:PageSpread">
+                <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                  <ContentControl Content="{Binding Left}" ContentTemplate="{StaticResource PageFrameTemplate}"
+                                  VerticalAlignment="Top" />
+                  <ContentControl Content="{Binding Right}" ContentTemplate="{StaticResource PageFrameTemplate}"
+                                  IsVisible="{Binding HasRight}" VerticalAlignment="Top" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Panel>
       </ScrollViewer>
 
       <Canvas x:Name="PopupLayer" ClipToBounds="False">

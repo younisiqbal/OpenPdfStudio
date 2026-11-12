@@ -92,6 +92,48 @@ internal static class PdfPageRenderer
 
         return pixels;
     }
+
+    /// <summary>
+    /// Renders one rectangle of a page (in points, top-left origin) at <paramref name="pixelsPerPoint"/>
+    /// into a packed BGRA buffer on a white background.
+    /// </summary>
+    public static PdfImageData RenderRegion(FpdfDocumentT document, int pageIndex, Size pageSize, Rect region, double pixelsPerPoint)
+    {
+        var width = Math.Max(1, (int)Math.Ceiling(region.Width * pixelsPerPoint));
+        var height = Math.Max(1, (int)Math.Ceiling(region.Height * pixelsPerPoint));
+        var page = fpdfview.FPDF_LoadPage(document, pageIndex);
+        if (PdfHandles.IsNull(page))
+            throw new InvalidOperationException($"Page {pageIndex + 1} could not be loaded.");
+
+        var pixels = new byte[width * height * 4];
+        var handle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
+        try
+        {
+            var target = fpdfview.FPDFBitmapCreateEx(width, height, BitmapFormatBgra, handle.AddrOfPinnedObject(), width * 4);
+            if (PdfHandles.IsNull(target))
+                throw new InvalidOperationException("PDFium could not allocate a render target.");
+
+            try
+            {
+                fpdfview.FPDFBitmapFillRect(target, 0, 0, width, height, White);
+                fpdfview.FPDF_RenderPageBitmap(target, page,
+                    (int)Math.Round(-region.X * pixelsPerPoint), (int)Math.Round(-region.Y * pixelsPerPoint),
+                    (int)Math.Round(pageSize.Width * pixelsPerPoint), (int)Math.Round(pageSize.Height * pixelsPerPoint),
+                    0, RenderAnnotations);
+            }
+            finally
+            {
+                fpdfview.FPDFBitmapDestroy(target);
+            }
+        }
+        finally
+        {
+            handle.Free();
+            fpdfview.FPDF_ClosePage(page);
+        }
+
+        return new PdfImageData(width, height, pixels);
+    }
 }
 
 internal static class PdfHandles

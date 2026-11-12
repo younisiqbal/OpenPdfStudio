@@ -121,6 +121,22 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Brings the main window to the front, used when a second launch opens a PDF.</summary>
     public Action? RequestActivate { get; set; }
 
+    public Func<Task>? ShowSettingsAsync { get; set; }
+
+    /// <summary>Shows the organize dialog. Returns the new page list, or null on cancel.</summary>
+    public Func<DocumentViewModel, Task<IReadOnlyList<PageArrangement>?>>? ShowOrganizeAsync { get; set; }
+
+    /// <summary>Shows the split dialog. Returns the files to write, or null on cancel.</summary>
+    public Func<DocumentViewModel, Task<IReadOnlyList<SplitOutput>?>>? ShowSplitAsync { get; set; }
+
+    /// <summary>Shows the merge dialog, starting with the given files. Returns the files in order, or null on cancel.</summary>
+    public Func<IReadOnlyList<string>, Task<IReadOnlyList<string>?>>? ShowMergeAsync { get; set; }
+
+    /// <summary>Asks a yes/no question. Arguments: title, message, label for yes.</summary>
+    public Func<string, string, string, Task<bool>>? ConfirmAsync { get; set; }
+
+    public Func<Task>? ShowAboutAsync { get; set; }
+
     public MainViewModel()
     {
         _isRibbonCollapsed = ViewerPreferences.RibbonCollapsed;
@@ -378,6 +394,31 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task MakeDefaultPdfApp() => Status = await PdfAssociation.MakeDefaultAsync();
 
+    [RelayCommand]
+    private Task OpenSettings() => ShowSettingsAsync?.Invoke() ?? Task.CompletedTask;
+
+    [RelayCommand]
+    private async Task StartCommenting()
+    {
+        if (await EnsureActiveDocumentAsync() is not null)
+            SelectRibbonTab(RibbonTab.Comment.ToString());
+    }
+
+    /// <summary>Returns the active document, or asks for a PDF and opens it when the home screen is showing.</summary>
+    private async Task<DocumentViewModel?> EnsureActiveDocumentAsync()
+    {
+        if (ActiveDocument is { } active)
+            return active;
+
+        if (PickPdfAsync is null || await PickPdfAsync() is not { Length: > 0 } path)
+        {
+            Status = "Open cancelled";
+            return null;
+        }
+
+        return await OpenAndGetDocumentAsync(path);
+    }
+
     [RelayCommand(CanExecute = nameof(HasActiveDocument))]
     private async Task CloseActiveTab()
     {
@@ -477,23 +518,27 @@ public partial class MainViewModel : ViewModelBase
         }
 
         Status = $"Opening {name}...";
+        if (await OpenSessionAsync(fullPath) is not { } session)
+            return;
+
+        var document = CreateDocument(session);
+        Documents.Add(document);
+        ActivateDocument(document);
+        Home.AddOpenedFile(fullPath);
+        Status = $"Opened: {name} ({session.PageCount} pages)";
+    }
+
+    /// <summary>Opens a PDF, asking for its password if needed. Shows the error and returns null on failure or cancel.</summary>
+    private async Task<PdfDocumentSession?> OpenSessionAsync(string fullPath)
+    {
+        var name = Path.GetFileName(fullPath);
         string? password = null;
 
         for (int attempt = 0; ; attempt++)
         {
             try
             {
-                var session = await PdfDocumentSession.OpenAsync(fullPath, password);
-                var document = new DocumentViewModel(session, s => Status = s, ActivateDocument,
-                    d => _ = RequestCloseDocumentAsync(d));
-                document.Search.OpenAdvancedSearch = options => AdvancedSearch.Open(options);
-                document.Shell = new DocumentShellCommands(ToggleReadModeCommand, ToggleFullScreenCommand, PrintCommand);
-                document.IsPresenting = IsPresenting;
-                Documents.Add(document);
-                ActivateDocument(document);
-                Home.AddOpenedFile(fullPath);
-                Status = $"Opened: {name} ({session.PageCount} pages)";
-                return;
+                return await PdfDocumentSession.OpenAsync(fullPath, password);
             }
             catch (PdfOpenException ex) when (ex.Error == PdfOpenError.PasswordRequired
                                               && attempt < MaxPasswordAttempts
@@ -503,7 +548,7 @@ public partial class MainViewModel : ViewModelBase
                 if (password is null)
                 {
                     Status = "Open cancelled";
-                    return;
+                    return null;
                 }
             }
             catch (PdfOpenException ex)
@@ -511,15 +556,25 @@ public partial class MainViewModel : ViewModelBase
                 var message = ex.Error == PdfOpenError.PasswordRequired ? "The password was incorrect." : ex.Message;
                 Status = $"Could not open {name}";
                 await ShowError("Could not open PDF", $"{name}\n\n{message}");
-                return;
+                return null;
             }
             catch (Exception ex)
             {
                 Status = $"Could not open {name}";
                 await ShowError("Could not open PDF", $"{name}\n\n{ex.Message}");
-                return;
+                return null;
             }
         }
+    }
+
+    private DocumentViewModel CreateDocument(PdfDocumentSession session)
+    {
+        var document = new DocumentViewModel(session, s => Status = s, ActivateDocument,
+            d => _ = RequestCloseDocumentAsync(d));
+        document.Search.OpenAdvancedSearch = options => AdvancedSearch.Open(options);
+        document.Shell = new DocumentShellCommands(ToggleReadModeCommand, ToggleFullScreenCommand, PrintCommand);
+        document.IsPresenting = IsPresenting;
+        return document;
     }
 
     /// <summary>Opens the file (or switches to its tab) and returns its document, or null if it could not be opened.</summary>

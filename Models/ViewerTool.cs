@@ -4,5 +4,6 @@ public enum ViewerTool
 {
     Hand,
     Select,
-    SelectAnnotation
+    SelectAnnotation,
+    Snapshot
 }

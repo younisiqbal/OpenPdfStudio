@@ -28,6 +28,8 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     private const long MaxRenderPixels = 16_000_000;
     private const double HoverHitTolerance = 2;
     private const double SelectionHitTolerance = 20;
+    private const double MinSnapshotPoints = 2;
+    private const double SnapshotPixelsPerPoint = 2 * 96.0 / 72.0;
     private static readonly double[] ZoomSteps = [25, 33, 50, 67, 75, 100, 125, 150, 200, 300, 400];
 
     private readonly PdfDocumentSession _session;
@@ -70,6 +72,10 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
 
         Search = new DocumentSearchViewModel(this, session, setStatus);
         InitAnnotations();
+        LoadUserBookmarks();
+
+        _layoutMode = ViewerPreferences.PageLayout;
+        RebuildSpreads();
 
         ViewerPreferences.Changed += OnViewerPreferencesChanged;
         ApplyZoomToPages();
@@ -96,6 +102,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     public Vector SavedScrollOffset { get; set; }
 
     public Func<string, Task>? SetClipboardTextAsync { get; set; }
+    public Func<PdfImageData, Task>? SetClipboardImageAsync { get; set; }
     public Func<Task<ClipboardContent?>>? ReadClipboardAsync { get; set; }
 
     /// <summary>Where a plain Paste should land: the right-clicked point, else the pointer, else null for page centre.</summary>
@@ -123,33 +130,32 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _pageInput;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsHandTool), nameof(IsSelectTool), nameof(IsSelectAnnotationTool))]
+    [NotifyPropertyChangedFor(nameof(IsHandTool), nameof(IsSelectTool), nameof(IsSelectAnnotationTool), nameof(IsSnapshotTool))]
     private ViewerTool _tool = ViewerTool.Hand;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CopySelectionCommand))]
     private bool _hasSelection;
 
+    /// <summary>Whether the left side panel (page thumbnails or bookmarks) is open.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowThumbnails))]
+    [NotifyPropertyChangedFor(nameof(ShowSidePanel), nameof(ShowThumbnailPane), nameof(ShowBookmarkPane),
+        nameof(IsPagesOpen), nameof(IsBookmarksOpen))]
     private bool _isThumbnailsVisible = true;
 
-    /// <summary>True in Read Mode and Full Screen; the thumbnails and bottom bar are hidden.</summary>
+    /// <summary>True in Read Mode and Full Screen; the side panel and bottom bar are hidden.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowThumbnails), nameof(ShowBottomBar),
-        nameof(ShowCommentChrome), nameof(ShowFormatPanel))]
+    [NotifyPropertyChangedFor(nameof(ShowSidePanel), nameof(ShowThumbnailPane), nameof(ShowBookmarkPane),
+        nameof(ShowBottomBar), nameof(ShowCommentChrome), nameof(ShowFormatPanel))]
     private bool _isPresenting;
 
-    public bool ShowThumbnails => IsThumbnailsVisible && !IsPresenting;
+    public bool ShowSidePanel => IsThumbnailsVisible && !IsPresenting;
     public bool ShowBottomBar => !IsPresenting;
 
     /// <summary>View rotation in degrees clockwise (0, 90, 180, 270). The file itself is not changed.</summary>
     [ObservableProperty] private int _rotation;
 
     private bool IsSideways => Rotation is 90 or 270;
-
-    [RelayCommand]
-    private void ToggleThumbnails() => IsThumbnailsVisible = !IsThumbnailsVisible;
 
     [RelayCommand]
     private void RotateClockwise()
@@ -167,6 +173,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     public string ZoomText => $"{Math.Round(ZoomPercent)}%";
     public bool IsHandTool => Tool == ViewerTool.Hand;
     public bool IsSelectTool => Tool == ViewerTool.Select;
+    public bool IsSnapshotTool => Tool == ViewerTool.Snapshot;
     public int SelectionPageIndex => _selection?.PageIndex ?? -1;
 
     [RelayCommand]
@@ -188,6 +195,73 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     {
         AnnotationTool = AnnotationTool.None;
         Tool = ViewerTool.Select;
+    }
+
+    [RelayCommand]
+    private void UseSnapshotTool()
+    {
+        AnnotationTool = AnnotationTool.None;
+        Tool = ViewerTool.Snapshot;
+        ClearSelection();
+        _setStatus("Snapshot: drag a box on a page to copy that area as an image");
+    }
+
+    /// <summary>Copies a rectangle of a page (in points) to the clipboard as an image, then returns to the hand tool.</summary>
+    public async Task CaptureSnapshotAsync(int pageIndex, Rect region)
+    {
+        Tool = ViewerTool.Hand;
+        if (region.Width < MinSnapshotPoints || region.Height < MinSnapshotPoints || SetClipboardImageAsync is null)
+        {
+            _setStatus("Snapshot cancelled: drag a larger box");
+            return;
+        }
+
+        var scale = SnapshotPixelsPerPoint;
+        var pixels = region.Width * region.Height * scale * scale;
+        if (pixels > MaxRenderPixels)
+            scale *= Math.Sqrt(MaxRenderPixels / pixels);
+
+        try
+        {
+            var image = RotateImage(await _session.RenderRegionAsync(pageIndex, region, scale), Rotation);
+            await SetClipboardImageAsync(image);
+            _setStatus($"Copied a {image.Width} × {image.Height} snapshot of page {pageIndex + 1}");
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (Exception)
+        {
+            _setStatus("Could not copy the snapshot");
+        }
+    }
+
+    /// <summary>Turns an unrotated page image to match the view rotation (degrees clockwise).</summary>
+    private static PdfImageData RotateImage(PdfImageData image, int degrees)
+    {
+        if (degrees == 0)
+            return image;
+
+        var (w, h) = (image.Width, image.Height);
+        var sideways = degrees is 90 or 270;
+        var outWidth = sideways ? h : w;
+        var outHeight = sideways ? w : h;
+        var result = new byte[image.Bgra.Length];
+        for (var y = 0; y < h; y++)
+        {
+            for (var x = 0; x < w; x++)
+            {
+                var (tx, ty) = degrees switch
+                {
+                    90 => (h - 1 - y, x),
+                    180 => (w - 1 - x, h - 1 - y),
+                    _ => (y, w - 1 - x)
+                };
+                Buffer.BlockCopy(image.Bgra, (y * w + x) * 4, result, (ty * outWidth + tx) * 4, 4);
+            }
+        }
+
+        return new PdfImageData(outWidth, outHeight, result);
     }
 
     public IBrush HighlightToolBrush =>
@@ -241,9 +315,6 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HighlightToolBrush));
     }
 
-    [RelayCommand]
-    private void ComingSoon(string? feature) => _setStatus($"{feature}: coming soon");
-
     public void SetStatusMessage(string message) => _setStatus(message);
 
     partial void OnZoomPercentChanged(double value)
@@ -274,6 +345,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
             Pages[newValue].IsCurrent = true;
 
         PageInput = (newValue + 1).ToString(CultureInfo.InvariantCulture);
+        SyncSinglePage();
     }
 
     #region Zoom
@@ -366,15 +438,6 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private double FitWidthPercent()
-    {
-        if (Pages.Count == 0 || ViewportSize.Width <= 0)
-            return 0;
-
-        var widest = Pages.Max(p => IsSideways ? p.HeightPoints : p.WidthPoints) * PdfPageViewModel.PointsToDip;
-        return (ViewportSize.Width - ViewerPadding * 2) / widest * 100;
-    }
-
     private void ApplyZoomToPages()
     {
         var factor = ZoomPercent / 100;
@@ -390,10 +453,10 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     private void FirstPage() => GoToPage(0);
 
     [RelayCommand(CanExecute = nameof(CanGoBack))]
-    private void PreviousPage() => GoToPage(CurrentPageIndex - 1);
+    private void PreviousPage() => GoToPage(PreviousPageIndex());
 
     [RelayCommand(CanExecute = nameof(CanGoForward))]
-    private void NextPage() => GoToPage(CurrentPageIndex + 1);
+    private void NextPage() => GoToPage(NextPageIndex());
 
     [RelayCommand(CanExecute = nameof(CanGoForward))]
     private void LastPage() => GoToPage(Pages.Count - 1);
@@ -407,8 +470,10 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
             PageInput = PageNumber.ToString(CultureInfo.InvariantCulture);
     }
 
-    private bool CanGoBack() => CurrentPageIndex > 0;
-    private bool CanGoForward() => CurrentPageIndex < Pages.Count - 1;
+    private bool CanGoBack() => RowOfPage(CurrentPageIndex) > 0;
+    private bool CanGoForward() => IsSinglePageLayout
+        ? CurrentPageIndex < Pages.Count - 1
+        : RowOfPage(CurrentPageIndex) < RowOfPage(Pages.Count - 1);
 
     public void GoToPage(int index)
     {
@@ -920,14 +985,21 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     /// <summary>Writes the document to <paramref name="path"/> and makes it this tab's file.</summary>
     public async Task SaveToAsync(string path)
     {
+        var previousPath = FilePath;
         await _session.SaveAsync(path);
         FilePath = _session.FilePath;
+        UserBookmarks.Copy(previousPath, FilePath);
         IsModified = false;
     }
 
     #endregion
 
-    public void Dispose()
+    public void Dispose() => Dispose(closeSession: true);
+
+    /// <summary>Releases this view of the document but leaves the PDF open for a replacement view.</summary>
+    public void Detach() => Dispose(closeSession: false);
+
+    private void Dispose(bool closeSession)
     {
         if (_disposed)
             return;
@@ -946,6 +1018,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
             page.ReleaseThumbnail();
         }
 
-        _session.Dispose();
+        if (closeSession)
+            _session.Dispose();
     }
 }

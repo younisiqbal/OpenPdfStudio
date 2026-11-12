@@ -15,11 +15,13 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 - Open PDF files, including password-protected documents.
 - Home screen with recent files and starred files.
 - Open several documents at once in tabs.
-- Continuous scrolling through pages, with a page thumbnail sidebar.
+- Three page layouts from the bottom bar: continuous scroll, single page, and two pages side by side (the first page on its own, like a book cover). In single-page layout, scrolling past the end of a page turns to the next one. The layout you pick is remembered.
+- A side panel with page thumbnails and a Bookmarks tab. The Bookmarks tab shows the PDF's own outline and your bookmarks. Add a bookmark from the panel or from the popup that appears when you select text. PDFium can't write outline entries, so your bookmarks are kept by OpenPdfStudio for each file (in `bookmarks.json` in the app's local data folder) rather than in the PDF.
 - Zoom from 25% to 400%, plus fit width, fit page, and actual size.
 - Rotate the page view.
 - Hand tool for panning, with a choice of cursor styles.
 - Select text on a page and copy it to the clipboard.
+- Snapshot tool: drag a box over any part of a page to copy that area to the clipboard as an image.
 - Comment tools: Note, Typewriter, Textbox, Highlight, Underline, Strikeout and Squiggly. They are saved as real PDF annotations. Notes open a yellow pellet you can drag independently of the icon. A Format panel (opened from Format, Properties, the pellet text, or note settings) sets font, size, colour, bold/italic/underline/strikeout, alignment, opacity, note icon, and border/fill for the whole annotation. Undo and Redo cover annotation changes.
 - Right-click a page for Paste, Read Mode, Full Screen, zoom and fit options, Rotate Right, Print, and Rulers.
 - Paste text or an image from the clipboard onto a page. Paste puts it where you right-clicked (or under the pointer). Paste in Place puts text copied from a PDF back at the same spot. Pasted text uses Helvetica, so it covers Western European characters only.
@@ -30,7 +32,14 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 - Find box (Ctrl+F) in the top-right corner of the page. It highlights every match, steps through them with Previous and Next, and has a gear menu with Whole Words Only, Case Sensitive, Include Page Text, Include Bookmarks, Include Comments, and Highlight All Text.
 - Search box in the tab row with recently used searches, Show matching text results, Advanced Search, and Search & Highlight.
 - Advanced Search panel. Search the current document, all open documents, or a folder of PDFs. Match the exact phrase, any of the words, or all of the words. Optionally include bookmarks, comments, and attachment names, and use stemming to find other forms of a word. Results are grouped by file, and clicking one jumps to the match.
+- Organize pages (Organize > Organize pages): reorder, rotate, and delete pages from a thumbnail grid. Rotation is written into the PDF, and the changes are kept when you save.
+- Split a PDF into one file per page, or one file per page range (for example `1-3; 4-7; 8-`).
+- Merge several PDFs into one, in the order you choose. Password-protected files ask for their password.
+- Settings (File > Settings, or the Settings button in the left toolbar) for theme, default page layout, hand cursor, ruler, comment tools, and the ribbon.
+- Help menu with links to the documentation and the issue tracker, and an About box.
 - Themes: Dark, Light, System, Midnight, and High Contrast.
+
+Adding a password and compressing PDFs are not available yet.
 
 ### Keyboard shortcuts
 
@@ -60,7 +69,7 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 | F3 / Enter | Next match |
 | Shift+F3 / Shift+Enter | Previous match |
 | Ctrl+Shift+F | Open Advanced Search |
-| Esc | Close the find box, or leave Read Mode and Full Screen |
+| Esc | Close the find box, cancel the snapshot tool, or leave Read Mode and Full Screen |
 
 ## Requirements
 
@@ -85,7 +94,7 @@ dotnet build -c Release
 - .NET 10
 - Avalonia 12.1.3 with the Fluent theme
 - CommunityToolkit.Mvvm for view models and commands
-- PDFiumCore for rendering pages and reading text
+- PDFiumCore for rendering pages, reading text, and editing pages
 
 PDFium calls run on a dedicated background worker, so rendering does not block the UI.
 

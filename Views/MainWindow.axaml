@@ -66,6 +66,7 @@
         <MenuItem Header="_Print..." InputGesture="Ctrl+P" Command="{Binding PrintCommand}" />
         <Separator />
         <MenuItem Header="Use as _default PDF app..." Command="{Binding MakeDefaultPdfAppCommand}" />
+        <MenuItem Header="Se_ttings..." Command="{Binding OpenSettingsCommand}" />
         <Separator />
         <MenuItem Header="E_xit" InputGesture="Alt+F4" Command="{Binding ExitCommand}" />
       </MenuItem>
@@ -123,18 +124,19 @@
         </MenuItem>
       </MenuItem>
       <MenuItem Header="_Organize">
-        <MenuItem Header="_Merge PDFs..." IsEnabled="False" />
-        <MenuItem Header="_Split PDF..." IsEnabled="False" />
-        <MenuItem Header="_Rotate / Delete pages" IsEnabled="False" />
+        <MenuItem Header="_Merge PDFs..." Command="{Binding MergePdfsCommand}" />
+        <MenuItem Header="_Split PDF..." Command="{Binding SplitPdfCommand}" />
+        <MenuItem Header="_Organize pages..." Command="{Binding OrganizePagesCommand}" />
       </MenuItem>
       <MenuItem Header="_Protect">
         <MenuItem Header="Add _password..." IsEnabled="False" />
         <MenuItem Header="_Compress..." IsEnabled="False" />
       </MenuItem>
       <MenuItem Header="_Help">
-        <MenuItem Header="_Documentation" IsEnabled="False" />
-        <MenuItem Header="_Report an issue" IsEnabled="False" />
-        <MenuItem Header="_About OpenPdfStudio" IsEnabled="False" />
+        <MenuItem Header="_Documentation" Command="{Binding OpenDocumentationCommand}" />
+        <MenuItem Header="_Report an issue" Command="{Binding ReportIssueCommand}" />
+        <Separator />
+        <MenuItem Header="_About OpenPdfStudio" Command="{Binding ShowAboutCommand}" />
       </MenuItem>
     </Menu>
 

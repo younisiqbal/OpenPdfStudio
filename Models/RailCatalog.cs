@@ -26,13 +26,14 @@ public static class RailCatalog
     [
         new("Home", "Home", Navigation, true, false),
         new("Pages", "Pages", View, true, true),
+        new("Bookmarks", "Bookmarks", View, true, true),
         new("Comment", "Comment", Comment, true, true),
         new("Recent", "Recent", Navigation, true, false),
         new("Starred", "Starred", Navigation, true, false),
         new("Settings", "Settings", Navigation, true, false),
         new("Hand", "Hand", Home, false, true),
         new("Select", "Select", Home, false, true),
-        new("Snapshot", "SnapShot", Home, false, true),
+        new("Snapshot", "Snapshot", Home, false, true),
         new("Clipboard", "Clipboard", Home, false, true),
         new("Zoom", "Zoom", Home, false, true),
         new("PageFit", "Page Fit", Home, false, true),
@@ -56,7 +57,7 @@ public static class RailCatalog
 
     public static readonly string[] DefaultPins =
     [
-        "Home", "Pages", "Comment", "Recent", "Starred", "Settings",
+        "Home", "Pages", "Bookmarks", "Comment", "Recent", "Starred", "Settings",
         "Hand", "Select", "Snapshot", "Clipboard", "Zoom", "PageFit", "Ruler"
     ];
 

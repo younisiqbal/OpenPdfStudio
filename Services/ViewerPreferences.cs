@@ -21,6 +21,7 @@ public static class ViewerPreferences
     private static readonly string AnnotationStylesFilePath = Path.Combine(SettingsDirectory, "annotation-styles.json");
     private static readonly string RailPinsFilePath = Path.Combine(SettingsDirectory, "rail-pins.json");
     private static readonly string RibbonCollapsedFilePath = Path.Combine(SettingsDirectory, "ribbon-collapsed.txt");
+    private static readonly string PageLayoutFilePath = Path.Combine(SettingsDirectory, "page-layout.txt");
 
     private static HandCursorStyle? _handCursorStyle;
     private static (bool Show, RulerUnit Unit)? _ruler;
@@ -29,8 +30,24 @@ public static class ViewerPreferences
     private static Dictionary<string, AnnotationStyleData>? _annotationStyles;
     private static HashSet<string>? _railPins;
     private static bool? _ribbonCollapsed;
+    private static PageLayoutMode? _pageLayout;
 
     public static event Action? Changed;
+
+    /// <summary>The layout new documents open in. Changing it from a document also updates this.</summary>
+    public static PageLayoutMode PageLayout
+    {
+        get => _pageLayout ??= Load(PageLayoutFilePath, PageLayoutMode.Continuous);
+        set
+        {
+            if (_pageLayout == value)
+                return;
+
+            _pageLayout = value;
+            Save(PageLayoutFilePath, value.ToString());
+            Changed?.Invoke();
+        }
+    }
 
     public static HandCursorStyle HandCursorStyle
     {

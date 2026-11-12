@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
@@ -203,7 +203,9 @@ public partial class DocumentView : UserControl
             _vm.ScrollToPageRequested -= OnScrollToPageRequested;
             _vm.ScrollToMatchRequested -= OnScrollToMatchRequested;
             _vm.PropertyChanged -= OnViewModelPropertyChanged;
+            _vm.Spreads.CollectionChanged -= OnSpreadsChanged;
             _vm.SetClipboardTextAsync = null;
+            _vm.SetClipboardImageAsync = null;
             _vm.ReadClipboardAsync = null;
             _vm.GetPasteAnchor = null;
             _vm.TextEditRequested -= OnTextEditRequested;
@@ -221,10 +223,16 @@ public partial class DocumentView : UserControl
         _vm.ScrollToPageRequested += OnScrollToPageRequested;
         _vm.ScrollToMatchRequested += OnScrollToMatchRequested;
         _vm.PropertyChanged += OnViewModelPropertyChanged;
+        _vm.Spreads.CollectionChanged += OnSpreadsChanged;
         _vm.SetClipboardTextAsync = async text =>
         {
             if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
                 await clipboard.SetTextAsync(text);
+        };
+        _vm.SetClipboardImageAsync = async image =>
+        {
+            if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                await clipboard.SetBitmapAsync(ToBitmap(image));
         };
         _vm.ReadClipboardAsync = ReadClipboardAsync;
         _vm.GetPasteAnchor = GetPasteAnchor;
@@ -276,6 +284,12 @@ public partial class DocumentView : UserControl
             case nameof(DocumentViewModel.IsRulerVisible):
                 Dispatcher.UIThread.Post(UpdateRulers, DispatcherPriority.Background);
                 break;
+            case nameof(DocumentViewModel.LayoutMode) when _vm is not null:
+                HidePopup();
+                HideEditors();
+                var current = _vm.CurrentPageIndex;
+                Dispatcher.UIThread.Post(() => ScrollToPage(current, 0), DispatcherPriority.Background);
+                break;
         }
     }
 
@@ -295,7 +309,7 @@ public partial class DocumentView : UserControl
             cursor = AppCursors.HighlighterFor(ViewerPreferences.GetAnnotationStyle(AnnotationKind.Highlight).Color);
         else if (_vm.IsTypewriterTool || _vm.IsMarkupTool || _isSelecting)
             cursor = AppCursors.Ibeam;
-        else if (_vm.HasAnnotationTool || _vm.IsSelectAnnotationTool || _isBoxing || _isMovingAnnotation || _isResizingAnnotation)
+        else if (_vm.HasAnnotationTool || _vm.IsSelectAnnotationTool || _vm.IsSnapshotTool || _isBoxing || _isMovingAnnotation || _isResizingAnnotation)
             cursor = new Cursor(StandardCursorType.Cross);
         else if (_vm.IsSelectTool || _overText)
             cursor = AppCursors.Ibeam;
@@ -387,17 +401,14 @@ public partial class DocumentView : UserControl
         var current = -1;
         var bestOverlap = 0.0;
 
-        foreach (var container in PagesHost.GetRealizedContainers())
+        foreach (var (page, frame) in RealizedPageFrames())
         {
-            if (container.DataContext is not PdfPageViewModel page)
-                continue;
-
-            var origin = container.TranslatePoint(default, PageScroller);
+            var origin = frame.TranslatePoint(default, PageScroller);
             if (origin is null)
                 continue;
 
             var top = origin.Value.Y;
-            var overlap = Math.Min(top + container.Bounds.Height, viewportHeight) - Math.Max(top, 0);
+            var overlap = Math.Min(top + frame.Bounds.Height, viewportHeight) - Math.Max(top, 0);
             if (overlap <= 0)
                 continue;
 
@@ -419,8 +430,7 @@ public partial class DocumentView : UserControl
             return;
 
         var index = vm.CurrentPageIndex;
-        if (index < 0 || index >= vm.Pages.Count ||
-            (PagesHost.ContainerFromIndex(index) as ContentPresenter)?.Child is not LayoutTransformControl page)
+        if (index < 0 || index >= vm.Pages.Count || PageFrame(index) is not { } page)
             return;
 
         var model = vm.Pages[index];
@@ -551,30 +561,50 @@ public partial class DocumentView : UserControl
         return new PdfImageData(size.Width, size.Height, pixels);
     }
 
+    /// <summary>Wraps an opaque BGRA render in a bitmap the clipboard can take.</summary>
+    private static WriteableBitmap ToBitmap(PdfImageData image)
+    {
+        var bitmap = new WriteableBitmap(new PixelSize(image.Width, image.Height), new Vector(96, 96),
+            PixelFormat.Bgra8888, AlphaFormat.Premul);
+        using var frame = bitmap.Lock();
+        var rowBytes = image.Width * 4;
+        for (int y = 0; y < image.Height; y++)
+            Marshal.Copy(image.Bgra, y * rowBytes, frame.Address + y * frame.RowBytes, rowBytes);
+        return bitmap;
+    }
+
     private void OnScrollToPageRequested(int index) => ScrollToPage(index, 0);
+
+    /// <summary>A new row may land at the same scroll offset, so no scroll event would ask for its pages.</summary>
+    private void OnSpreadsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        HidePopup();
+        HideEditors();
+        Dispatcher.UIThread.Post(UpdateVisiblePages, DispatcherPriority.Background);
+    }
 
     private void OnScrollToMatchRequested(int index, double fraction) =>
         ScrollToPage(index, fraction, viewportOffset: PageScroller.Viewport.Height / 3);
 
     private void ScrollToPage(int index, double fraction, int attempt = 0, double viewportOffset = 0)
     {
-        var container = PagesHost.ContainerFromIndex(index);
-        if (container is null)
+        var frame = PageFrame(index);
+        if (frame is null)
         {
-            if (attempt >= 3)
+            if (attempt >= 3 || _vm is null)
                 return;
 
-            PagesHost.ScrollIntoView(index);
+            ActiveHost.ScrollIntoView(_vm.RowOfPage(index));
             Dispatcher.UIThread.Post(() => ScrollToPage(index, fraction, attempt + 1, viewportOffset),
                 DispatcherPriority.Background);
             return;
         }
 
-        var top = container.TranslatePoint(default, PagesHost);
+        var top = frame.TranslatePoint(default, PageScroller);
         if (top is null)
             return;
 
-        var y = PagesHost.Margin.Top + top.Value.Y + fraction * container.Bounds.Height - viewportOffset;
+        var y = PageScroller.Offset.Y + top.Value.Y + fraction * frame.Bounds.Height - viewportOffset;
         if (fraction == 0)
             y -= DocumentViewModel.PageSpacing;
 
@@ -587,11 +617,11 @@ public partial class DocumentView : UserControl
             return;
 
         var index = _vm.CurrentPageIndex;
-        var container = PagesHost.ContainerFromIndex(index);
-        var origin = container?.TranslatePoint(default, PageScroller);
+        var frame = PageFrame(index);
+        var origin = frame?.TranslatePoint(default, PageScroller);
         var fraction = 0.0;
-        if (container is not null && origin is not null && container.Bounds.Height > 0)
-            fraction = Math.Clamp(-origin.Value.Y / container.Bounds.Height, 0, 1);
+        if (frame is not null && origin is not null && frame.Bounds.Height > 0)
+            fraction = Math.Clamp(-origin.Value.Y / frame.Bounds.Height, 0, 1);
 
         _zoomAnchor = (index, fraction);
         Dispatcher.UIThread.Post(() =>
@@ -610,8 +640,15 @@ public partial class DocumentView : UserControl
 
     private void OnPageWheel(object? sender, PointerWheelEventArgs e)
     {
-        if (_vm is null || !e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        if (_vm is null)
             return;
+
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            if (e.Delta.Y != 0 && FlipAtEdge(e.Delta.Y < 0))
+                e.Handled = true;
+            return;
+        }
 
         _vm.ZoomByWheel(e.Delta.Y > 0);
         e.Handled = true;
@@ -632,6 +669,14 @@ public partial class DocumentView : UserControl
         if (_vm.HasAnnotationTool)
         {
             HandleAnnotationToolPress(e, position, hit);
+            return;
+        }
+
+        if (_vm.IsSnapshotTool)
+        {
+            if (hit is { } snapHit)
+                BeginBox(e, snapHit);
+            e.Handled = true;
             return;
         }
 
@@ -725,11 +770,7 @@ public partial class DocumentView : UserControl
 
         if (_vm.IsTextboxTool)
         {
-            _isBoxing = true;
-            _boxPageIndex = pageHit.Page.Index;
-            _boxStart = _boxCurrent = pageHit.PointInPoints;
-            pageHit.Page.DraftRect = new Rect(_boxStart, new Size(1, 1));
-            e.Pointer.Capture(PageScroller);
+            BeginBox(e, pageHit);
             e.Handled = true;
             return;
         }
@@ -742,6 +783,16 @@ public partial class DocumentView : UserControl
             e.Pointer.Capture(PageScroller);
             e.Handled = true;
         }
+    }
+
+    /// <summary>Starts dragging a rectangle on a page, for a text box or a snapshot.</summary>
+    private void BeginBox(PointerPressedEventArgs e, (PdfPageViewModel Page, Point PointInPoints) hit)
+    {
+        _isBoxing = true;
+        _boxPageIndex = hit.Page.Index;
+        _boxStart = _boxCurrent = hit.PointInPoints;
+        hit.Page.DraftRect = new Rect(_boxStart, new Size(1, 1));
+        e.Pointer.Capture(PageScroller);
     }
 
     private void BeginAnnotationDrag(AnnotationViewModel annotation, Point point, AnnotationHandle handle)
@@ -863,7 +914,9 @@ public partial class DocumentView : UserControl
             e.Pointer.Capture(null);
             e.Handled = true;
             page.DraftRect = null;
-            if (_vm.IsTextboxTool)
+            if (_vm.IsSnapshotTool)
+                _ = _vm.CaptureSnapshotAsync(_boxPageIndex, box);
+            else if (_vm.IsTextboxTool)
                 _ = _vm.AddAnnotationAsync(_vm.CreateTextbox(_boxPageIndex, box), beginEdit: true);
             return;
         }
@@ -919,6 +972,8 @@ public partial class DocumentView : UserControl
             case Key.Escape:
                 if (_vm.HasAnnotationTool)
                     _vm.AnnotationTool = AnnotationTool.None;
+                else if (_vm.IsSnapshotTool)
+                    _vm.Tool = ViewerTool.Hand;
                 else if (_vm.HasSelectedAnnotation)
                     _vm.ClearAnnotationSelection();
                 else if (_vm.Search.IsOpen && !_vm.HasSelection)
@@ -952,27 +1007,82 @@ public partial class DocumentView : UserControl
 
     private void ScrollBy(double deltaY)
     {
+        if (FlipAtEdge(deltaY > 0))
+            return;
+
         var maxY = Math.Max(0, PageScroller.Extent.Height - PageScroller.Viewport.Height);
         var y = Math.Clamp(PageScroller.Offset.Y + deltaY, 0, maxY);
         PageScroller.Offset = new Vector(PageScroller.Offset.X, y);
     }
 
+    /// <summary>
+    /// In single-page layout, scrolling past the bottom of a page turns to the next one (and past the top
+    /// to the previous one, shown from its bottom). Returns true when the page turned.
+    /// </summary>
+    private bool FlipAtEdge(bool forward)
+    {
+        if (_vm is not { IsSinglePageLayout: true } vm)
+            return false;
+
+        var maxY = Math.Max(0, PageScroller.Extent.Height - PageScroller.Viewport.Height);
+        if (forward && PageScroller.Offset.Y >= maxY - 1 && vm.NextPageCommand.CanExecute(null))
+        {
+            vm.NextPageCommand.Execute(null);
+            return true;
+        }
+
+        if (!forward && PageScroller.Offset.Y <= 1 && vm.PreviousPageCommand.CanExecute(null))
+        {
+            vm.PreviousPageCommand.Execute(null);
+            Dispatcher.UIThread.Post(() =>
+            {
+                var bottom = Math.Max(0, PageScroller.Extent.Height - PageScroller.Viewport.Height);
+                PageScroller.Offset = new Vector(PageScroller.Offset.X, bottom);
+            }, DispatcherPriority.Background);
+            return true;
+        }
+
+        return false;
+    }
+
     private static bool IsOnScrollBar(object? source) =>
         source is Visual visual && visual.FindAncestorOfType<ScrollBar>(includeSelf: true) is not null;
 
-    private Control? PageSurface(int pageIndex) => SurfaceOf(PagesHost.ContainerFromIndex(pageIndex));
+    /// <summary>The items control showing pages in the current layout.</summary>
+    private ItemsControl ActiveHost => _vm is { UsesSpreads: true } ? SpreadsHost : PagesHost;
 
-    /// <summary>The unrotated page surface inside a realized container; its coordinates match PDF points.</summary>
-    private static Control? SurfaceOf(Control? container) =>
-        (container as ContentPresenter)?.Child is LayoutTransformControl { Child: Control surface }
-            ? surface
-            : null;
+    /// <summary>Every realized page in the current layout, with its rotating frame.</summary>
+    private IEnumerable<(PdfPageViewModel Page, LayoutTransformControl Frame)> RealizedPageFrames()
+    {
+        foreach (var container in ActiveHost.GetRealizedContainers())
+        {
+            foreach (var frame in container.GetSelfAndVisualDescendants().OfType<LayoutTransformControl>())
+            {
+                if (frame.Classes.Contains("pageFrame") && frame.IsEffectivelyVisible && frame.DataContext is PdfPageViewModel page)
+                    yield return (page, frame);
+            }
+        }
+    }
+
+    private LayoutTransformControl? PageFrame(int pageIndex)
+    {
+        foreach (var (page, frame) in RealizedPageFrames())
+        {
+            if (page.Index == pageIndex)
+                return frame;
+        }
+
+        return null;
+    }
+
+    /// <summary>The unrotated page surface inside a page frame; its coordinates match PDF points.</summary>
+    private Control? PageSurface(int pageIndex) => PageFrame(pageIndex)?.Child;
 
     private (PdfPageViewModel Page, Point PointInPoints)? HitTestPage(Point positionInScroller)
     {
-        foreach (var container in PagesHost.GetRealizedContainers())
+        foreach (var (page, frame) in RealizedPageFrames())
         {
-            if (container.DataContext is not PdfPageViewModel page || SurfaceOf(container) is not { } surface)
+            if (frame.Child is not { } surface)
                 continue;
 
             var local = PageScroller.TranslatePoint(positionInScroller, surface);
