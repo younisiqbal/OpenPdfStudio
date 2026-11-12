@@ -11,7 +11,9 @@
         Icon="/Assets/app-logo.ico"
         Title="OpenPdfStudio"
         Width="1100" Height="700"
-        MinWidth="800" MinHeight="500">
+        MinWidth="800" MinHeight="500"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="36">
 
   <Design.DataContext>
     <vm:MainViewModel />
@@ -50,7 +52,71 @@
     <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding ActiveDocument.RedoCommand, FallbackValue={x:Null}}" />
   </Window.KeyBindings>
 
+  <Window.Styles>
+    <Style Selector="Button.caption">
+      <Setter Property="Width" Value="46" />
+      <Setter Property="Height" Value="36" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.caption /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource TitleBarForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.caption:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#26FFFFFF" />
+      <Setter Property="Foreground" Value="{DynamicResource TitleBarForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.caption:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#40FFFFFF" />
+    </Style>
+    <Style Selector="Button.caption.close:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#C42B1C" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.caption.close:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#A32315" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.caption PathIcon">
+      <Setter Property="Width" Value="10" />
+      <Setter Property="Height" Value="10" />
+    </Style>
+  </Window.Styles>
+
   <DockPanel>
+
+    <Border x:Name="TitleBar" DockPanel.Dock="Top" Height="36"
+            Background="{DynamicResource TitleBarBrush}"
+            IsVisible="{Binding !IsFullScreen}">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+          <Button Classes="caption" Click="OnMinimizeClick" ToolTip.Tip="Minimize">
+            <PathIcon Data="{StaticResource CaptionMinimizeIcon}" />
+          </Button>
+          <Button Classes="caption" Click="OnMaximizeClick" ToolTip.Tip="Maximize">
+            <Panel>
+              <PathIcon x:Name="MaximizeGlyph" Data="{StaticResource CaptionMaximizeIcon}" />
+              <PathIcon x:Name="RestoreGlyph" Data="{StaticResource CaptionRestoreIcon}" IsVisible="False" />
+            </Panel>
+          </Button>
+          <Button Classes="caption close" Click="OnCloseClick" ToolTip.Tip="Close">
+            <PathIcon Data="{StaticResource CaptionCloseIcon}" />
+          </Button>
+        </StackPanel>
+        <Border x:Name="TitleDragArea" Background="Transparent"
+                PointerPressed="OnTitleBarPointerPressed"
+                DoubleTapped="OnTitleBarDoubleTapped">
+          <TextBlock Text="OpenPdfStudio" Margin="16,0,0,0" VerticalAlignment="Center"
+                     FontSize="15" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TitleBarForegroundBrush}"
+                     IsHitTestVisible="False" />
+        </Border>
+      </DockPanel>
+    </Border>
 
     <Menu DockPanel.Dock="Top" IsVisible="{Binding ShowAppMenu}">
       <MenuItem Header="_File">

@@ -14,6 +14,25 @@
                 <ResourceInclude Source="avares://OpenPdfStudio/Styles/Colors.axaml" />
                 <ResourceInclude Source="avares://OpenPdfStudio/Styles/Icons.axaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- The main window draws its own title bar and caption buttons. -->
+            <ControlTheme x:Key="{x:Type WindowDrawnDecorations}" TargetType="WindowDrawnDecorations">
+                <Setter Property="DefaultTitleBarHeight" Value="36" />
+                <Setter Property="DefaultFrameThickness" Value="0" />
+                <Setter Property="DefaultShadowThickness" Value="0" />
+                <Setter Property="Template">
+                    <WindowDrawnDecorationsTemplate>
+                        <WindowDrawnDecorationsContent>
+                            <WindowDrawnDecorationsContent.Underlay>
+                                <Panel IsHitTestVisible="False" />
+                            </WindowDrawnDecorationsContent.Underlay>
+                            <WindowDrawnDecorationsContent.Overlay>
+                                <Panel IsHitTestVisible="False" />
+                            </WindowDrawnDecorationsContent.Overlay>
+                        </WindowDrawnDecorationsContent>
+                    </WindowDrawnDecorationsTemplate>
+                </Setter>
+            </ControlTheme>
         </ResourceDictionary>
     </Application.Resources>
 
