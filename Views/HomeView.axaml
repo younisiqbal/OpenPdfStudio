@@ -100,7 +100,7 @@
             <StackPanel Spacing="6">
               <TextBlock Text="Organize pages" FontWeight="SemiBold" />
               <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                         Text="Reorder, rotate, and delete pages." />
+                         Text="Drag to reorder, rotate, delete, or add blank pages." />
             </StackPanel>
           </Button>
           <Button Classes="toolCard" Margin="0,0,10,0" MinHeight="112"

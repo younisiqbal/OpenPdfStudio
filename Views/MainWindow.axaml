@@ -126,7 +126,7 @@
       <MenuItem Header="_Organize">
         <MenuItem Header="_Merge PDFs..." Command="{Binding MergePdfsCommand}" />
         <MenuItem Header="_Split PDF..." Command="{Binding SplitPdfCommand}" />
-        <MenuItem Header="_Organize pages..." Command="{Binding OrganizePagesCommand}" />
+        <MenuItem Header="_Organize pages" Command="{Binding OrganizePagesCommand}" />
       </MenuItem>
       <MenuItem Header="_Protect">
         <MenuItem Header="Add _password..." IsEnabled="False" />

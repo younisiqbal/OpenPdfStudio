@@ -149,8 +149,8 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         nameof(ShowBottomBar), nameof(ShowCommentChrome), nameof(ShowFormatPanel))]
     private bool _isPresenting;
 
-    public bool ShowSidePanel => IsThumbnailsVisible && !IsPresenting;
-    public bool ShowBottomBar => !IsPresenting;
+    public bool ShowSidePanel => IsThumbnailsVisible && !IsPresenting && !IsOrganizing;
+    public bool ShowBottomBar => !IsPresenting && !IsOrganizing;
 
     /// <summary>View rotation in degrees clockwise (0, 90, 180, 270). The file itself is not changed.</summary>
     [ObservableProperty] private int _rotation;
@@ -1005,6 +1005,7 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
             return;
 
         _disposed = true;
+        ReleaseOrganizeItems();
         Search.Dispose();
         _undo.Changed -= OnUndoStackChanged;
         ViewerPreferences.Changed -= OnViewerPreferencesChanged;

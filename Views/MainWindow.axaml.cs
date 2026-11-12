@@ -45,7 +45,6 @@ public partial class MainWindow : Window
             _vm.ConfirmSaveChangesAsync = null;
             _vm.PrintDocumentAsync = null;
             _vm.ShowSettingsAsync = null;
-            _vm.ShowOrganizeAsync = null;
             _vm.ShowSplitAsync = null;
             _vm.ShowMergeAsync = null;
             _vm.ConfirmAsync = null;
@@ -68,7 +67,6 @@ public partial class MainWindow : Window
             await new SaveChangesDialog(fileName).ShowDialog<SaveChangesChoice?>(this) ?? SaveChangesChoice.Cancel;
         _vm.PrintDocumentAsync = PrintDocumentAsync;
         _vm.ShowSettingsAsync = () => new SettingsDialog(_vm).ShowDialog(this);
-        _vm.ShowOrganizeAsync = document => new OrganizePagesDialog(document).ShowDialog<IReadOnlyList<PageArrangement>?>(this);
         _vm.ShowSplitAsync = document => new SplitDialog(document).ShowDialog<IReadOnlyList<SplitOutput>?>(this);
         _vm.ShowMergeAsync = files => new MergeDialog(files).ShowDialog<IReadOnlyList<string>?>(this);
         _vm.ConfirmAsync = (title, message, yes) => new ConfirmDialog(title, message, yes).ShowDialog<bool>(this);

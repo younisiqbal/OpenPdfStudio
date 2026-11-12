@@ -1,0 +1,220 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             x:Class="OpenPdfStudio.Views.OrganizePagesView"
+             x:DataType="vm:DocumentViewModel"
+             Focusable="True"
+             ClipToBounds="True"
+             Background="{DynamicResource SystemChromeMediumColor}">
+
+  <UserControl.Resources>
+    <DataTemplate x:Key="OrganizeThumbTemplate" x:DataType="vm:OrganizePageItem">
+      <Panel Width="{Binding Box}" Height="{Binding Box}">
+        <LayoutTransformControl LayoutTransform="{Binding Transform}"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Border Background="White" BoxShadow="0 1 6 0 #50000000">
+            <Panel Width="{Binding ImageWidth}" Height="{Binding ImageHeight}">
+              <Image Source="{Binding Thumbnail}" Stretch="Fill"
+                     RenderOptions.BitmapInterpolationMode="HighQuality" />
+              <TextBlock Text="Blank" Foreground="#80000000" FontSize="11"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                         IsVisible="{Binding IsBlank}" />
+            </Panel>
+          </Border>
+        </LayoutTransformControl>
+      </Panel>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <UserControl.Styles>
+    <Style Selector="Border.orgTile, Border.orgRow">
+      <Setter Property="Padding" Value="8" />
+      <Setter Property="Margin" Value="4" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Border.orgTile:pointerover, Border.orgRow:pointerover">
+      <Setter Property="Background" Value="#14808080" />
+    </Style>
+    <Style Selector="Border.orgTile.focused, Border.orgRow.focused">
+      <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+    </Style>
+    <Style Selector="Border.orgTile.selected, Border.orgRow.selected">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Background" Value="#22808080" />
+    </Style>
+    <Style Selector="Border.orgTile.dragging, Border.orgRow.dragging">
+      <Setter Property="Opacity" Value="0.35" />
+    </Style>
+    <Style Selector="Button.orgTool">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Padding" Value="8,5" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.orgTool:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+    </Style>
+    <Style Selector="Button.orgTool.active">
+      <Setter Property="Background" Value="{DynamicResource NavActiveBrush}" />
+    </Style>
+    <Style Selector="Button.orgTool PathIcon">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+    </Style>
+    <Style Selector="Button.orgTool TextBlock">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top"
+            Background="{DynamicResource SystemChromeLowColor}"
+            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,0,1"
+            Padding="10,6">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Content="Cancel" MinWidth="80" Command="{Binding CancelOrganizeCommand}" ToolTip.Tip="Discard changes (Esc)" />
+          <Button Content="Apply" MinWidth="80" Classes="primary" Padding="16,6"
+                  Command="{Binding ApplyOrganizeCommand}" IsEnabled="{Binding IsOrganizeChanged}"
+                  ToolTip.Tip="Write the page changes into the PDF" />
+        </StackPanel>
+
+        <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <Button Classes="orgTool" Command="{Binding RotateOrganizeCommand}" CommandParameter="Left"
+                  IsEnabled="{Binding HasOrganizeSelection}" ToolTip.Tip="Rotate the selected pages 90° left">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource RotatePageIcon}" RenderTransform="scaleX(-1)" />
+              <TextBlock Text="Rotate left" />
+            </StackPanel>
+          </Button>
+          <Button Classes="orgTool" Command="{Binding RotateOrganizeCommand}" CommandParameter="Right"
+                  IsEnabled="{Binding HasOrganizeSelection}" ToolTip.Tip="Rotate the selected pages 90° right">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource RotatePageIcon}" />
+              <TextBlock Text="Rotate right" />
+            </StackPanel>
+          </Button>
+          <Button Classes="orgTool" Command="{Binding DeleteOrganizeSelectionCommand}"
+                  IsEnabled="{Binding HasOrganizeSelection}" ToolTip.Tip="Delete the selected pages (Delete)">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource TrashIcon}" />
+              <TextBlock Text="Delete" />
+            </StackPanel>
+          </Button>
+          <Button Classes="orgTool" Command="{Binding InsertBlankPageCommand}"
+                  ToolTip.Tip="Insert a blank page before the selection, or at the end (Ctrl+B)">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource BlankPageIcon}" />
+              <TextBlock Text="Insert blank" />
+            </StackPanel>
+          </Button>
+          <Button Classes="orgTool" Command="{Binding SelectAllOrganizeCommand}" ToolTip.Tip="Select all pages (Ctrl+A)">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource SelectAllIcon}" />
+              <TextBlock Text="Select all" />
+            </StackPanel>
+          </Button>
+
+          <Border Classes="toolSeparator" Margin="8,6" />
+
+          <Button Classes="orgTool" Classes.active="{Binding IsOrganizeGrid}"
+                  Command="{Binding SetOrganizeLayoutCommand}" CommandParameter="Grid" ToolTip.Tip="Grid view">
+            <PathIcon Data="{StaticResource OrganizePagesIcon}" />
+          </Button>
+          <Button Classes="orgTool" Classes.active="{Binding IsOrganizeList}"
+                  Command="{Binding SetOrganizeLayoutCommand}" CommandParameter="List" ToolTip.Tip="List view">
+            <PathIcon Data="{StaticResource ListViewIcon}" />
+          </Button>
+
+          <Border Classes="toolSeparator" Margin="8,6" />
+
+          <Button Classes="orgTool" Classes.active="{Binding IsOrganizeSmall}"
+                  Command="{Binding SetOrganizeTileSizeCommand}" CommandParameter="Small" ToolTip.Tip="Small thumbnails">
+            <TextBlock Text="S" FontWeight="SemiBold" />
+          </Button>
+          <Button Classes="orgTool" Classes.active="{Binding IsOrganizeMedium}"
+                  Command="{Binding SetOrganizeTileSizeCommand}" CommandParameter="Medium" ToolTip.Tip="Medium thumbnails">
+            <TextBlock Text="M" FontWeight="SemiBold" />
+          </Button>
+          <Button Classes="orgTool" Classes.active="{Binding IsOrganizeLarge}"
+                  Command="{Binding SetOrganizeTileSizeCommand}" CommandParameter="Large" ToolTip.Tip="Large thumbnails">
+            <TextBlock Text="L" FontWeight="SemiBold" />
+          </Button>
+        </WrapPanel>
+      </DockPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom"
+            Background="{DynamicResource SystemChromeLowColor}"
+            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0"
+            Padding="12,6">
+      <TextBlock Text="{Binding OrganizeSummary}" FontSize="12" Opacity="0.8" TextTrimming="CharacterEllipsis" />
+    </Border>
+
+    <Panel x:Name="Surface" Background="Transparent">
+      <ScrollViewer x:Name="Scroller" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <Panel>
+          <ItemsControl x:Name="GridHost" ItemsSource="{Binding OrganizeItems}" Margin="16"
+                        IsVisible="{Binding IsOrganizeGrid}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:OrganizePageItem">
+                <Border Classes="orgTile"
+                        Classes.selected="{Binding IsSelected}"
+                        Classes.focused="{Binding IsFocused}"
+                        Classes.dragging="{Binding IsDragging}"
+                        Width="{Binding TileWidth}">
+                  <StackPanel Spacing="6">
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource OrganizeThumbTemplate}"
+                                    HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" FontSize="12" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <ItemsControl x:Name="ListHost" ItemsSource="{Binding OrganizeItems}" Margin="16"
+                        IsVisible="{Binding IsOrganizeList}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:OrganizePageItem">
+                <Border Classes="orgRow"
+                        Classes.selected="{Binding IsSelected}"
+                        Classes.focused="{Binding IsFocused}"
+                        Classes.dragging="{Binding IsDragging}">
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" Width="36"
+                               VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Opacity="0.7" />
+                    <ContentControl DockPanel.Dock="Left" Content="{Binding}"
+                                    ContentTemplate="{StaticResource OrganizeThumbTemplate}" Margin="0,0,16,0" />
+                    <StackPanel VerticalAlignment="Center" Spacing="3">
+                      <TextBlock Text="{Binding Detail}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding SizeText}" FontSize="12" Opacity="0.7" />
+                      <TextBlock Text="{Binding RotationText}" FontSize="12" Opacity="0.7" IsVisible="{Binding HasRotation}" />
+                    </StackPanel>
+                  </DockPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Panel>
+      </ScrollViewer>
+
+      <Canvas x:Name="Overlay" IsHitTestVisible="False">
+        <Rectangle x:Name="Marquee" IsVisible="False" StrokeThickness="1"
+                   Stroke="{DynamicResource AccentBrush}" Fill="#283B82F6" />
+        <Border x:Name="DropIndicator" IsVisible="False" CornerRadius="2"
+                Background="{DynamicResource AccentBrush}" />
+      </Canvas>
+    </Panel>
+  </DockPanel>
+</UserControl>

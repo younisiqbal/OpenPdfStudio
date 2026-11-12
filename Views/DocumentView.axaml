@@ -370,6 +370,8 @@
                      HorizontalAlignment="Right" VerticalAlignment="Top"
                      Margin="0,12,24,0" />
       </Grid>
+
+      <views:OrganizePagesView Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Grid.ColumnSpan="2" />
     </Grid>
   </DockPanel>
 </UserControl>

@@ -123,9 +123,6 @@ public partial class MainViewModel : ViewModelBase
 
     public Func<Task>? ShowSettingsAsync { get; set; }
 
-    /// <summary>Shows the organize dialog. Returns the new page list, or null on cancel.</summary>
-    public Func<DocumentViewModel, Task<IReadOnlyList<PageArrangement>?>>? ShowOrganizeAsync { get; set; }
-
     /// <summary>Shows the split dialog. Returns the files to write, or null on cancel.</summary>
     public Func<DocumentViewModel, Task<IReadOnlyList<SplitOutput>?>>? ShowSplitAsync { get; set; }
 
@@ -574,6 +571,7 @@ public partial class MainViewModel : ViewModelBase
         document.Search.OpenAdvancedSearch = options => AdvancedSearch.Open(options);
         document.Shell = new DocumentShellCommands(ToggleReadModeCommand, ToggleFullScreenCommand, PrintCommand);
         document.IsPresenting = IsPresenting;
+        document.ApplyArrangementAsync = pages => ApplyArrangementAsync(document, pages);
         return document;
     }
 

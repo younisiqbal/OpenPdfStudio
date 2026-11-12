@@ -15,15 +15,13 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task OrganizePages()
     {
-        if (ShowOrganizeAsync is null || await EnsureActiveDocumentAsync() is not { } document)
-            return;
+        if (await EnsureActiveDocumentAsync() is { } document)
+            document.EnterOrganize();
+    }
 
-        if (await ShowOrganizeAsync(document) is not { } pages)
-        {
-            Status = "Organize cancelled";
-            return;
-        }
-
+    /// <summary>Writes the organized page list into the PDF and replaces the tab's view. Returns false on failure.</summary>
+    private async Task<bool> ApplyArrangementAsync(DocumentViewModel document, IReadOnlyList<PageArrangement> pages)
+    {
         try
         {
             await document.Session.ArrangePagesAsync(pages);
@@ -32,11 +30,12 @@ public partial class MainViewModel
         {
             Status = "Could not change the pages";
             await ShowError("Could not organize pages", ex.Message);
-            return;
+            return false;
         }
 
         var oldCount = document.PageCount;
-        var newIndexOf = pages.Select((p, i) => (p.SourceIndex, i)).ToDictionary(x => x.SourceIndex, x => x.i);
+        var newIndexOf = pages.Select((p, i) => (p.SourceIndex, i)).Where(x => x.SourceIndex >= 0)
+            .ToDictionary(x => x.SourceIndex, x => x.i);
         UserBookmarks.Set(document.FilePath, UserBookmarks.For(document.FilePath)
             .Where(b => newIndexOf.ContainsKey(b.PageIndex))
             .Select(b => b with { PageIndex = newIndexOf[b.PageIndex] }));
@@ -52,10 +51,15 @@ public partial class MainViewModel
         ActivateDocument(replacement);
         document.Detach();
 
-        var deleted = oldCount - pages.Count;
-        Status = deleted > 0
-            ? $"Pages updated: {deleted} deleted, {pages.Count} left. Save to keep the changes."
+        var deleted = oldCount - newIndexOf.Count;
+        var blanks = pages.Count(p => p.IsBlank);
+        var changes = new List<string>();
+        if (deleted > 0) changes.Add($"{deleted} deleted");
+        if (blanks > 0) changes.Add($"{blanks} blank added");
+        Status = changes.Count > 0
+            ? $"Pages updated: {string.Join(", ", changes)}, {pages.Count} pages now. Save to keep the changes."
             : "Pages updated. Save to keep the changes.";
+        return true;
     }
 
     [RelayCommand]

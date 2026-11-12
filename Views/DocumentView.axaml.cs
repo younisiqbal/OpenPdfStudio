@@ -964,7 +964,7 @@ public partial class DocumentView : UserControl
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (_vm is null || e.KeyModifiers != KeyModifiers.None || e.Source is TextBox)
+        if (_vm is null || _vm.IsOrganizing || e.KeyModifiers != KeyModifiers.None || e.Source is TextBox)
             return;
 
         switch (e.Key)

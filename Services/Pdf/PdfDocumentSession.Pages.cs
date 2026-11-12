@@ -6,8 +6,19 @@ using PDFiumCore;
 
 namespace OpenPdfStudio.Services.Pdf;
 
-/// <summary>One page of a rearranged document: which current page it is, and how many quarter turns clockwise to add.</summary>
-public sealed record PageArrangement(int SourceIndex, int QuarterTurns);
+/// <summary>
+/// One page of a rearranged document: which current page it is, and how many quarter turns clockwise to add.
+/// A negative <see cref="SourceIndex"/> is a new blank page of <see cref="WidthPoints"/> by <see cref="HeightPoints"/>.
+/// </summary>
+public sealed record PageArrangement(int SourceIndex, int QuarterTurns, double WidthPoints = 0, double HeightPoints = 0)
+{
+    public const int Blank = -1;
+
+    public bool IsBlank => SourceIndex < 0;
+
+    public static PageArrangement BlankPage(double widthPoints, double heightPoints, int quarterTurns = 0) =>
+        new(Blank, quarterTurns, widthPoints, heightPoints);
+}
 
 /// <summary>One file produced by a split: where it goes and which pages it holds.</summary>
 public sealed record SplitOutput(string Path, IReadOnlyList<int> PageIndices);
@@ -15,23 +26,26 @@ public sealed record SplitOutput(string Path, IReadOnlyList<int> PageIndices);
 public sealed partial class PdfDocumentSession
 {
     /// <summary>
-    /// Reorders, rotates, and deletes pages in place. <paramref name="pages"/> is the new page list; current pages
-    /// missing from it are deleted. Rotation is written to each page's /Rotate entry.
+    /// Reorders, rotates, deletes, and inserts blank pages in place. <paramref name="pages"/> is the new page list;
+    /// current pages missing from it are deleted. Rotation is written to each page's /Rotate entry.
     /// </summary>
     public Task ArrangePagesAsync(IReadOnlyList<PageArrangement> pages) =>
         _worker.InvokeAsync(() =>
         {
             ThrowIfDisposed();
             var oldCount = _pageSizes.Length;
+            var existing = pages.Where(p => !p.IsBlank).ToList();
             if (pages.Count == 0)
                 throw new ArgumentException("A PDF must keep at least one page.", nameof(pages));
-            if (pages.Any(p => p.SourceIndex < 0 || p.SourceIndex >= oldCount) ||
-                pages.Select(p => p.SourceIndex).Distinct().Count() != pages.Count)
+            if (existing.Any(p => p.SourceIndex >= oldCount) ||
+                existing.Select(p => p.SourceIndex).Distinct().Count() != existing.Count)
                 throw new ArgumentException("Each page can appear only once.", nameof(pages));
+            if (pages.Any(p => p.IsBlank && (p.WidthPoints <= 0 || p.HeightPoints <= 0)))
+                throw new ArgumentException("A blank page needs a size.", nameof(pages));
 
             ForgetAllPages();
 
-            var kept = pages.Select(p => p.SourceIndex).ToHashSet();
+            var kept = existing.Select(p => p.SourceIndex).ToHashSet();
             for (var i = oldCount - 1; i >= 0; i--)
             {
                 if (!kept.Contains(i))
@@ -40,10 +54,22 @@ public sealed partial class PdfDocumentSession
 
             // After deleting, the kept pages sit in their original order; find each one's new position.
             var remaining = Enumerable.Range(0, oldCount).Where(kept.Contains).ToList();
-            var order = pages.Select(p => remaining.IndexOf(p.SourceIndex)).ToArray();
+            var order = existing.Select(p => remaining.IndexOf(p.SourceIndex)).ToArray();
             if (!order.SequenceEqual(Enumerable.Range(0, order.Length)) &&
                 fpdf_edit.FPDF_MovePages(_document, ref order[0], (ulong)order.Length, 0) == 0)
                 throw new InvalidOperationException("PDFium could not reorder the pages.");
+
+            // Kept pages are now in final order; inserting blanks front to back pushes them into place.
+            for (var i = 0; i < pages.Count; i++)
+            {
+                if (!pages[i].IsBlank)
+                    continue;
+
+                var blank = fpdf_edit.FPDFPageNew(_document, i, pages[i].WidthPoints, pages[i].HeightPoints);
+                if (PdfHandles.IsNull(blank))
+                    throw new InvalidOperationException("PDFium could not add a blank page.");
+                fpdfview.FPDF_ClosePage(blank);
+            }
 
             for (var i = 0; i < pages.Count; i++)
             {

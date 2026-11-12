@@ -22,6 +22,8 @@ public static class ViewerPreferences
     private static readonly string RailPinsFilePath = Path.Combine(SettingsDirectory, "rail-pins.json");
     private static readonly string RibbonCollapsedFilePath = Path.Combine(SettingsDirectory, "ribbon-collapsed.txt");
     private static readonly string PageLayoutFilePath = Path.Combine(SettingsDirectory, "page-layout.txt");
+    private static readonly string OrganizeLayoutFilePath = Path.Combine(SettingsDirectory, "organize-layout.txt");
+    private static readonly string OrganizeTileSizeFilePath = Path.Combine(SettingsDirectory, "organize-tile-size.txt");
 
     private static HandCursorStyle? _handCursorStyle;
     private static (bool Show, RulerUnit Unit)? _ruler;
@@ -31,8 +33,38 @@ public static class ViewerPreferences
     private static HashSet<string>? _railPins;
     private static bool? _ribbonCollapsed;
     private static PageLayoutMode? _pageLayout;
+    private static OrganizeLayout? _organizeLayout;
+    private static OrganizeTileSize? _organizeTileSize;
 
     public static event Action? Changed;
+
+    public static OrganizeLayout OrganizeLayout
+    {
+        get => _organizeLayout ??= Load(OrganizeLayoutFilePath, OrganizeLayout.Grid);
+        set
+        {
+            if (_organizeLayout == value)
+                return;
+
+            _organizeLayout = value;
+            Save(OrganizeLayoutFilePath, value.ToString());
+            Changed?.Invoke();
+        }
+    }
+
+    public static OrganizeTileSize OrganizeTileSize
+    {
+        get => _organizeTileSize ??= Load(OrganizeTileSizeFilePath, OrganizeTileSize.Medium);
+        set
+        {
+            if (_organizeTileSize == value)
+                return;
+
+            _organizeTileSize = value;
+            Save(OrganizeTileSizeFilePath, value.ToString());
+            Changed?.Invoke();
+        }
+    }
 
     /// <summary>The layout new documents open in. Changing it from a document also updates this.</summary>
     public static PageLayoutMode PageLayout
