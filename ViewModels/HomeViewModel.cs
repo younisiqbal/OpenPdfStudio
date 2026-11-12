@@ -45,6 +45,9 @@ public partial class HomeViewModel : ViewModelBase
     [ObservableProperty] private bool _hasRecentFiles;
     [ObservableProperty] private bool _hasStarredFiles;
 
+    /// <summary>When true, the home sidebar lists starred files instead of recent.</summary>
+    [ObservableProperty] private bool _isStarredSidebar;
+
     /// <summary>True while a file is being dragged over the window, to highlight the drop zone.</summary>
     [ObservableProperty] private bool _isFileDragOver;
 
@@ -56,11 +59,24 @@ public partial class HomeViewModel : ViewModelBase
         file is null ? Task.CompletedTask : _openPath(file.FullPath);
 
     [RelayCommand]
+    private void ShowRecentSidebar() => IsStarredSidebar = false;
+
+    [RelayCommand]
+    private void ShowStarredSidebar() => IsStarredSidebar = true;
+
+    [RelayCommand]
     private void ClearRecent()
     {
         RecentFiles.Clear();
         _setStatus("Recent files cleared");
     }
+
+    /// <summary>Home tool tiles that are not implemented yet.</summary>
+    [RelayCommand]
+    private void ComingSoon(string? feature) =>
+        _setStatus(string.IsNullOrWhiteSpace(feature)
+            ? "This feature is coming soon"
+            : $"{feature} is coming soon");
 
     [RelayCommand]
     private void ToggleStar(RecentFile? file)

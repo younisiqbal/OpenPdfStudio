@@ -4,7 +4,7 @@
              xmlns:models="using:OpenPdfStudio.Models"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="640"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
              x:Class="OpenPdfStudio.Views.HomeView"
              x:DataType="vm:HomeViewModel">
 
@@ -28,178 +28,246 @@
     <Style Selector="Border.dropZone.dragOver Rectangle.dropOutline">
       <Setter Property="StrokeThickness" Value="2.5" />
     </Style>
+
+    <Style Selector="Border.homeSidebar">
+      <Setter Property="Background" Value="{DynamicResource SystemChromeLowColor}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,1,0" />
+    </Style>
+
+    <Style Selector="Button.sidebarTab">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Button.sidebarTab:pointerover">
+      <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+    </Style>
+    <Style Selector="Button.sidebarTab.active">
+      <Setter Property="Background" Value="{DynamicResource NavActiveBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+    <Style Selector="Button.toolCard PathIcon">
+      <Setter Property="Width" Value="22" />
+      <Setter Property="Height" Value="22" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
   </UserControl.Styles>
 
   <UserControl.Resources>
-    <DataTemplate x:Key="FileRowTemplate" x:DataType="models:RecentFile">
-      <Grid ColumnDefinitions="40,*,140,90,40" Margin="4,2">
-        <Border Width="28" Height="34" CornerRadius="4"
+    <DataTemplate x:Key="SidebarFileRowTemplate" x:DataType="models:RecentFile">
+      <Grid ColumnDefinitions="32,*,28" Margin="2,1" MinHeight="44">
+        <Border Width="24" Height="30" CornerRadius="3"
                 Background="{DynamicResource PdfBadgeBrush}"
                 VerticalAlignment="Center">
-          <TextBlock Text="PDF" FontSize="9" FontWeight="Bold" Foreground="White"
+          <TextBlock Text="PDF" FontSize="8" FontWeight="Bold" Foreground="White"
                      HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,12,0">
-          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-          <TextBlock Classes="muted" FontSize="12" Text="{Binding Folder}" TextTrimming="CharacterEllipsis" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,4,0">
+          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Classes="muted" FontSize="11"
+                     Text="{Binding Folder}" TextTrimming="CharacterEllipsis" />
         </StackPanel>
-        <TextBlock Grid.Column="2" Classes="muted" Text="{Binding LastOpened}" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="3" Classes="muted" Text="{Binding Size}"
-                   VerticalAlignment="Center" HorizontalAlignment="Right" />
-        <Button Grid.Column="4" Classes="icon" HorizontalAlignment="Right" VerticalAlignment="Center"
+        <Button Grid.Column="2" Classes="icon" HorizontalAlignment="Right" VerticalAlignment="Center"
                 Command="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).ToggleStarCommand}"
                 CommandParameter="{Binding}"
                 ToolTip.Tip="Star or unstar this file">
           <Panel>
-            <PathIcon Data="{StaticResource StarIcon}" Foreground="#F5B301" IsVisible="{Binding IsStarred}" />
-            <PathIcon Data="{StaticResource StarOutlineIcon}" IsVisible="{Binding !IsStarred}" />
+            <PathIcon Width="14" Height="14" Data="{StaticResource StarIcon}" Foreground="#F5B301"
+                      IsVisible="{Binding IsStarred}" />
+            <PathIcon Width="14" Height="14" Data="{StaticResource StarOutlineIcon}"
+                      IsVisible="{Binding !IsStarred}" />
           </Panel>
         </Button>
       </Grid>
     </DataTemplate>
   </UserControl.Resources>
 
-  <ScrollViewer>
-    <StackPanel MaxWidth="920" Margin="36,32,36,40" Spacing="28" HorizontalAlignment="Stretch">
+  <Grid ColumnDefinitions="260,*">
 
-      <StackPanel Spacing="6">
-        <TextBlock Classes="title" Text="Welcome to OpenPdfStudio" />
-        <TextBlock Classes="subtitle"
-                   Text="Free, open-source PDF viewing and editing. Your files never leave this computer." />
-      </StackPanel>
-
-      <Border Classes="card dropZone" Classes.dragOver="{Binding IsFileDragOver}" Padding="4">
-        <Grid MinHeight="108">
-          <Rectangle Classes="dropOutline"
-                     Stroke="{DynamicResource AccentBrush}"
-                     StrokeThickness="1.5"
-                     StrokeDashArray="6,5"
-                     RadiusX="8" RadiusY="8"
-                     Fill="Transparent"
-                     IsHitTestVisible="False"
-                     Margin="2" />
-          <DockPanel Margin="24,18" LastChildFill="True">
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <Button Classes="ghost"
-                      Content="Use as default PDF app"
-                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).MakeDefaultPdfAppCommand}" />
-              <Button Classes="primary"
-                      Content="Open a PDF"
-                      Command="{Binding OpenFileCommand}" />
-            </StackPanel>
-            <StackPanel Spacing="4" VerticalAlignment="Center" Margin="0,0,24,0">
-              <Panel>
-                <TextBlock Text="Drop a PDF here" FontSize="18" FontWeight="SemiBold" IsVisible="{Binding !IsFileDragOver}" />
-                <TextBlock Text="Release to open" FontSize="18" FontWeight="SemiBold"
-                           Foreground="{DynamicResource AccentBrush}" IsVisible="{Binding IsFileDragOver}" />
-              </Panel>
-              <TextBlock Classes="muted" Text="or choose a file from your computer. Press Ctrl+O at any time." />
-            </StackPanel>
-          </DockPanel>
+    <!-- Recent / Starred sidebar -->
+    <Border Classes="homeSidebar">
+      <DockPanel Margin="12,16,12,12">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*" Margin="0,0,0,12">
+          <Button Classes="sidebarTab" Classes.active="{Binding !IsStarredSidebar}"
+                  Content="Recent" Command="{Binding ShowRecentSidebarCommand}" />
+          <Button Grid.Column="1" Classes="sidebarTab" Classes.active="{Binding IsStarredSidebar}"
+                  Content="Starred" Command="{Binding ShowStarredSidebarCommand}" />
         </Grid>
-      </Border>
 
-      <StackPanel Spacing="12">
-        <TextBlock Classes="section" Text="Quick tools" />
-        <UniformGrid Columns="3">
-          <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="112"
-                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).MergePdfsCommand}">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Merge PDFs" FontWeight="SemiBold" />
-              <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                         Text="Combine several files into one document." />
-            </StackPanel>
-          </Button>
-          <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="112"
-                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SplitPdfCommand}">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Split PDF" FontWeight="SemiBold" />
-              <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                         Text="Break a file into separate pages or ranges." />
-            </StackPanel>
-          </Button>
-          <Button Classes="toolCard" Margin="0,0,0,10" MinHeight="112"
-                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OrganizePagesCommand}">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Organize pages" FontWeight="SemiBold" />
-              <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                         Text="Drag to reorder, rotate, delete, or add blank pages." />
-            </StackPanel>
-          </Button>
-          <Button Classes="toolCard" Margin="0,0,10,0" MinHeight="112"
-                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).StartCommentingCommand}">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Add comments" FontWeight="SemiBold" />
-              <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                         Text="Highlight text, and add notes and text boxes." />
-            </StackPanel>
-          </Button>
-          <Border Classes="card tool" Margin="0,0,10,0" MinHeight="112">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Protect" FontWeight="SemiBold" />
-              <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                         Text="Set or remove a password." />
-              <TextBlock Classes="hint" Text="Coming soon" />
-            </StackPanel>
-          </Border>
-          <Border Classes="card tool" MinHeight="112">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Compress" FontWeight="SemiBold" />
-              <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                         Text="Make large files smaller." />
-              <TextBlock Classes="hint" Text="Coming soon" />
-            </StackPanel>
-          </Border>
-        </UniformGrid>
-      </StackPanel>
+        <Button DockPanel.Dock="Bottom" Classes="ghost" HorizontalAlignment="Stretch"
+                Content="Clear list"
+                Command="{Binding ClearRecentCommand}"
+                IsVisible="{Binding !IsStarredSidebar}"
+                IsEnabled="{Binding HasRecentFiles}"
+                Margin="0,8,0,0" />
 
-      <StackPanel Spacing="12">
-        <DockPanel>
-          <Button DockPanel.Dock="Right"
-                  Classes="ghost"
-                  Content="Clear list"
-                  Command="{Binding ClearRecentCommand}"
-                  IsVisible="{Binding HasRecentFiles}" />
-          <TextBlock Classes="section" Text="Recent files" VerticalAlignment="Center" />
-        </DockPanel>
-
-        <Border Classes="card" Padding="20,28" IsVisible="{Binding !HasRecentFiles}">
-          <StackPanel Spacing="4" HorizontalAlignment="Center">
-            <TextBlock Text="No recent files yet" FontWeight="SemiBold" HorizontalAlignment="Center" />
-            <TextBlock Classes="muted" FontSize="13" HorizontalAlignment="Center"
+        <!-- Recent list -->
+        <Panel IsVisible="{Binding !IsStarredSidebar}">
+          <StackPanel Spacing="4" VerticalAlignment="Center" Margin="8"
+                      IsVisible="{Binding !HasRecentFiles}">
+            <TextBlock Text="No recent files" FontWeight="SemiBold" HorizontalAlignment="Center" />
+            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" HorizontalAlignment="Center"
                        Text="Open a PDF and it will show up here." />
           </StackPanel>
-        </Border>
-
-        <Border Classes="card" Padding="0" IsVisible="{Binding HasRecentFiles}">
           <ListBox ItemsSource="{Binding RecentFiles}"
-                   ItemTemplate="{StaticResource FileRowTemplate}"
+                   ItemTemplate="{StaticResource SidebarFileRowTemplate}"
                    Background="Transparent"
                    BorderThickness="0"
+                   IsVisible="{Binding HasRecentFiles}"
                    DoubleTapped="OnRecentFileDoubleTapped" />
-        </Border>
-      </StackPanel>
+        </Panel>
 
-      <StackPanel Spacing="12">
-        <TextBlock Classes="section" Text="Starred" />
-
-        <Border Classes="card" Padding="20,28" IsVisible="{Binding !HasStarredFiles}">
-          <StackPanel Spacing="4" HorizontalAlignment="Center">
-            <TextBlock Text="No starred files yet" FontWeight="SemiBold" HorizontalAlignment="Center" />
-            <TextBlock Classes="muted" FontSize="13" HorizontalAlignment="Center"
-                       Text="Click the star next to a recent file to keep it here." />
+        <!-- Starred list -->
+        <Panel IsVisible="{Binding IsStarredSidebar}">
+          <StackPanel Spacing="4" VerticalAlignment="Center" Margin="8"
+                      IsVisible="{Binding !HasStarredFiles}">
+            <TextBlock Text="No starred files" FontWeight="SemiBold" HorizontalAlignment="Center" />
+            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" HorizontalAlignment="Center"
+                       Text="Click the star next to a file to keep it here." />
           </StackPanel>
-        </Border>
-
-        <Border Classes="card" Padding="0" IsVisible="{Binding HasStarredFiles}">
           <ListBox ItemsSource="{Binding StarredFiles}"
-                   ItemTemplate="{StaticResource FileRowTemplate}"
+                   ItemTemplate="{StaticResource SidebarFileRowTemplate}"
                    Background="Transparent"
                    BorderThickness="0"
+                   IsVisible="{Binding HasStarredFiles}"
                    DoubleTapped="OnRecentFileDoubleTapped" />
-        </Border>
-      </StackPanel>
+        </Panel>
+      </DockPanel>
+    </Border>
 
-    </StackPanel>
-  </ScrollViewer>
+    <!-- Main: brand, drop zone, tools -->
+    <ScrollViewer Grid.Column="1">
+      <StackPanel MaxWidth="860" Margin="32,28,32,36" Spacing="24" HorizontalAlignment="Stretch">
+
+        <StackPanel Spacing="4">
+          <TextBlock Classes="title" Text="OpenPdfStudio" />
+          <TextBlock Classes="subtitle"
+                     Text="Free, open-source PDF viewing and editing. Your files never leave this computer." />
+        </StackPanel>
+
+        <Border Classes="card dropZone" Classes.dragOver="{Binding IsFileDragOver}" Padding="4">
+          <Grid MinHeight="120">
+            <Rectangle Classes="dropOutline"
+                       Stroke="{DynamicResource AccentBrush}"
+                       StrokeThickness="1.5"
+                       StrokeDashArray="6,5"
+                       RadiusX="8" RadiusY="8"
+                       Fill="Transparent"
+                       IsHitTestVisible="False"
+                       Margin="2" />
+            <DockPanel Margin="24,18" LastChildFill="True">
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Classes="ghost"
+                        Content="Use as default PDF app"
+                        Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).MakeDefaultPdfAppCommand}" />
+                <Button Classes="primary"
+                        Content="Open a PDF"
+                        Command="{Binding OpenFileCommand}" />
+              </StackPanel>
+              <StackPanel Spacing="4" VerticalAlignment="Center" Margin="0,0,24,0">
+                <Panel>
+                  <TextBlock Text="Drop a PDF here" FontSize="18" FontWeight="SemiBold"
+                             IsVisible="{Binding !IsFileDragOver}" />
+                  <TextBlock Text="Release to open" FontSize="18" FontWeight="SemiBold"
+                             Foreground="{DynamicResource AccentBrush}"
+                             IsVisible="{Binding IsFileDragOver}" />
+                </Panel>
+                <TextBlock Classes="muted"
+                           Text="or choose a file from your computer. Press Ctrl+O at any time." />
+              </StackPanel>
+            </DockPanel>
+          </Grid>
+        </Border>
+
+        <StackPanel Spacing="12">
+          <TextBlock Classes="section" Text="Quick tools" />
+          <UniformGrid Columns="3">
+
+            <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="118"
+                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OrganizePagesCommand}">
+              <StackPanel Spacing="8">
+                <PathIcon Data="{StaticResource OrganizePagesIcon}" />
+                <TextBlock Text="Organize pages" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                           Text="Drag to reorder, rotate, delete, or add blank pages." />
+              </StackPanel>
+            </Button>
+
+            <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="118"
+                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SplitPdfCommand}">
+              <StackPanel Spacing="8">
+                <PathIcon Data="{StaticResource SplitPdfIcon}" />
+                <TextBlock Text="Split PDF" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                           Text="Break a file into separate pages or ranges." />
+              </StackPanel>
+            </Button>
+
+            <Button Classes="toolCard" Margin="0,0,0,10" MinHeight="118"
+                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).MergePdfsCommand}">
+              <StackPanel Spacing="8">
+                <PathIcon Data="{StaticResource MergePdfsIcon}" />
+                <TextBlock Text="Merge PDFs" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                           Text="Combine several files into one document." />
+              </StackPanel>
+            </Button>
+
+            <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="118"
+                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).StartCommentingCommand}">
+              <StackPanel Spacing="8">
+                <PathIcon Data="{StaticResource CommentIcon}" />
+                <TextBlock Text="Add comments" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                           Text="Highlight text, and add notes and text boxes." />
+              </StackPanel>
+            </Button>
+
+            <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="118"
+                    Command="{Binding ComingSoonCommand}" CommandParameter="Scan PDF">
+              <StackPanel Spacing="8">
+                <PathIcon Data="{StaticResource ScanPdfIcon}" />
+                <TextBlock Text="Scan PDF" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                           Text="Turn scans or images into a searchable PDF." />
+                <TextBlock Classes="hint" Text="Coming soon" />
+              </StackPanel>
+            </Button>
+
+            <Button Classes="toolCard" Margin="0,0,0,10" MinHeight="118"
+                    Command="{Binding ComingSoonCommand}" CommandParameter="Protect">
+              <StackPanel Spacing="8">
+                <PathIcon Data="{StaticResource LockIcon}" />
+                <TextBlock Text="Protect" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                           Text="Set or remove a password." />
+                <TextBlock Classes="hint" Text="Coming soon" />
+              </StackPanel>
+            </Button>
+
+            <Button Classes="toolCard" Margin="0,0,10,0" MinHeight="118"
+                    Command="{Binding ComingSoonCommand}" CommandParameter="Compress">
+              <StackPanel Spacing="8">
+                <PathIcon Data="{StaticResource CompressIcon}" />
+                <TextBlock Text="Compress" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                           Text="Make large files smaller." />
+                <TextBlock Classes="hint" Text="Coming soon" />
+              </StackPanel>
+            </Button>
+
+          </UniformGrid>
+        </StackPanel>
+
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
 </UserControl>
