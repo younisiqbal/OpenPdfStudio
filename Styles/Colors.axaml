@@ -12,6 +12,14 @@
       <SolidColorBrush x:Key="DropFillBrush" Color="#260E7C86" />
       <SolidColorBrush x:Key="NavActiveBrush" Color="#330E7C86" />
       <SolidColorBrush x:Key="HairlineBrush" Color="#33FFFFFF" />
+      <SolidColorBrush x:Key="HomeSidebarBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="HomeCanvasBrush" Color="#F4F5F7" />
+      <SolidColorBrush x:Key="HomeCardBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="HomeCardBorderBrush" Color="#E2E5EA" />
+      <SolidColorBrush x:Key="HomeTextBrush" Color="#1F2328" />
+      <SolidColorBrush x:Key="HomeMutedBrush" Color="#5F6B7A" />
+      <SolidColorBrush x:Key="HomeRowHoverBrush" Color="#F0F4F6" />
+      <SolidColorBrush x:Key="HomeRowSelectedBrush" Color="#E1F1F3" />
     </ResourceDictionary>
 
     <ResourceDictionary x:Key="Light">
@@ -21,6 +29,14 @@
       <SolidColorBrush x:Key="DropFillBrush" Color="#140E7C86" />
       <SolidColorBrush x:Key="NavActiveBrush" Color="#220E7C86" />
       <SolidColorBrush x:Key="HairlineBrush" Color="#1F000000" />
+      <SolidColorBrush x:Key="HomeSidebarBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="HomeCanvasBrush" Color="#F4F5F7" />
+      <SolidColorBrush x:Key="HomeCardBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="HomeCardBorderBrush" Color="#E2E5EA" />
+      <SolidColorBrush x:Key="HomeTextBrush" Color="#1F2328" />
+      <SolidColorBrush x:Key="HomeMutedBrush" Color="#5F6B7A" />
+      <SolidColorBrush x:Key="HomeRowHoverBrush" Color="#F0F4F6" />
+      <SolidColorBrush x:Key="HomeRowSelectedBrush" Color="#E1F1F3" />
     </ResourceDictionary>
 
     <ResourceDictionary x:Key="{x:Static themes:AppThemes.Midnight}">
@@ -34,6 +50,14 @@
       <SolidColorBrush x:Key="DropFillBrush" Color="#2614A3AD" />
       <SolidColorBrush x:Key="NavActiveBrush" Color="#3314A3AD" />
       <SolidColorBrush x:Key="HairlineBrush" Color="#2E8FA8D6" />
+      <SolidColorBrush x:Key="HomeSidebarBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="HomeCanvasBrush" Color="#F4F5F7" />
+      <SolidColorBrush x:Key="HomeCardBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="HomeCardBorderBrush" Color="#E2E5EA" />
+      <SolidColorBrush x:Key="HomeTextBrush" Color="#1F2328" />
+      <SolidColorBrush x:Key="HomeMutedBrush" Color="#5F6B7A" />
+      <SolidColorBrush x:Key="HomeRowHoverBrush" Color="#F0F4F6" />
+      <SolidColorBrush x:Key="HomeRowSelectedBrush" Color="#E1F1F3" />
     </ResourceDictionary>
 
     <ResourceDictionary x:Key="{x:Static themes:AppThemes.HighContrast}">
@@ -47,6 +71,14 @@
       <SolidColorBrush x:Key="DropFillBrush" Color="#1FFFD400" />
       <SolidColorBrush x:Key="NavActiveBrush" Color="#40FFD400" />
       <SolidColorBrush x:Key="HairlineBrush" Color="#B3FFFFFF" />
+      <SolidColorBrush x:Key="HomeSidebarBrush" Color="#000000" />
+      <SolidColorBrush x:Key="HomeCanvasBrush" Color="#000000" />
+      <SolidColorBrush x:Key="HomeCardBrush" Color="#0A0A0A" />
+      <SolidColorBrush x:Key="HomeCardBorderBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="HomeTextBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="HomeMutedBrush" Color="#D0D0D0" />
+      <SolidColorBrush x:Key="HomeRowHoverBrush" Color="#262626" />
+      <SolidColorBrush x:Key="HomeRowSelectedBrush" Color="#40FFD400" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 

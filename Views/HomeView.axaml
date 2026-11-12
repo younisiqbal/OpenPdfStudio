@@ -6,76 +6,180 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
              x:Class="OpenPdfStudio.Views.HomeView"
-             x:DataType="vm:HomeViewModel">
+             x:DataType="vm:HomeViewModel"
+             Foreground="{DynamicResource HomeTextBrush}">
 
   <Design.DataContext>
     <vm:HomeViewModel />
   </Design.DataContext>
 
   <UserControl.Styles>
-    <Style Selector="Border.dropZone">
-      <Setter Property="Background" Value="{DynamicResource DropFillBrush}" />
-      <Setter Property="Transitions">
-        <Transitions>
-          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
-        </Transitions>
-      </Setter>
+    <Style Selector="TextBlock.homeMuted">
+      <Setter Property="Foreground" Value="{DynamicResource HomeMutedBrush}" />
     </Style>
-    <Style Selector="Border.dropZone.dragOver">
-      <Setter Property="Background" Value="{DynamicResource NavActiveBrush}" />
-      <Setter Property="RenderTransform" Value="scale(1.01)" />
+
+    <!-- Main canvas; the border lights up while a PDF is dragged over the window. -->
+    <Style Selector="Border.homeCanvas">
+      <Setter Property="Background" Value="{DynamicResource HomeCanvasBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
-    <Style Selector="Border.dropZone.dragOver Rectangle.dropOutline">
-      <Setter Property="StrokeThickness" Value="2.5" />
+    <Style Selector="Border.homeCanvas.dragOver">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
 
     <Style Selector="Border.homeSidebar">
-      <Setter Property="Background" Value="{DynamicResource SystemChromeLowColor}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+      <Setter Property="Background" Value="{DynamicResource HomeSidebarBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource HomeCardBorderBrush}" />
       <Setter Property="BorderThickness" Value="0,0,1,0" />
     </Style>
 
+    <!-- Recent / Starred switch -->
     <Style Selector="Button.sidebarTab">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Padding" Value="12,8" />
-      <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Padding" Value="4,6" />
+      <Setter Property="Margin" Value="0,0,16,0" />
+      <Setter Property="FontSize" Value="14" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="FontSize" Value="13" />
+      <Setter Property="BorderThickness" Value="0,0,0,2" />
+      <Setter Property="CornerRadius" Value="0" />
     </Style>
-    <Style Selector="Button.sidebarTab:pointerover">
-      <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+    <Style Selector="Button.sidebarTab /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeMutedBrush}" />
     </Style>
-    <Style Selector="Button.sidebarTab.active">
-      <Setter Property="Background" Value="{DynamicResource NavActiveBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Style Selector="Button.sidebarTab:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+    </Style>
+    <Style Selector="Button.sidebarTab.active /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
 
-    <Style Selector="Button.toolCard PathIcon">
-      <Setter Property="Width" Value="22" />
-      <Setter Property="Height" Value="22" />
-      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <!-- Text-style button for "Clear all" -->
+    <Style Selector="Button.homeLink">
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="Button.homeLink /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeMutedBrush}" />
+    </Style>
+    <Style Selector="Button.homeLink:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource HomeRowHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+    </Style>
+    <Style Selector="Button.homeLink:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Opacity" Value="0.45" />
+    </Style>
+
+    <!-- Star toggle inside file rows -->
+    <Style Selector="Button.star">
+      <Setter Property="Padding" Value="4" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.star /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.star:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource HomeCardBorderBrush}" />
+    </Style>
+
+    <!-- File rows -->
+    <Style Selector="ListBox.homeFiles">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="ListBox.homeFiles ListBoxItem">
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Margin" Value="0,1" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="ListBox.homeFiles ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+    </Style>
+    <Style Selector="ListBox.homeFiles ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource HomeRowHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+    </Style>
+    <Style Selector="ListBox.homeFiles ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource HomeRowSelectedBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+    </Style>
+    <Style Selector="ListBox.homeFiles ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource HomeRowSelectedBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+    </Style>
+
+    <!-- Task cards -->
+    <Style Selector="Button.taskCard">
+      <Setter Property="Margin" Value="0,0,16,16" />
+      <Setter Property="MinHeight" Value="160" />
+      <Setter Property="Padding" Value="16" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.taskCard /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource HomeCardBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource HomeCardBorderBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+      <Setter Property="BoxShadow" Value="0 1 3 0 #14000000" />
+    </Style>
+    <Style Selector="Button.taskCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource HomeCardBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+      <Setter Property="BoxShadow" Value="0 4 12 0 #22000000" />
+    </Style>
+    <Style Selector="Button.taskCard:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource HomeRowHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeTextBrush}" />
+    </Style>
+    <Style Selector="Button.taskCard PathIcon">
+      <Setter Property="Width" Value="56" />
+      <Setter Property="Height" Value="56" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.taskCard TextBlock.label">
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="Button.taskCard TextBlock.soon">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{DynamicResource HomeMutedBrush}" />
     </Style>
   </UserControl.Styles>
 
   <UserControl.Resources>
     <DataTemplate x:Key="SidebarFileRowTemplate" x:DataType="models:RecentFile">
-      <Grid ColumnDefinitions="32,*,28" Margin="2,1" MinHeight="44">
-        <Border Width="24" Height="30" CornerRadius="3"
-                Background="{DynamicResource PdfBadgeBrush}"
-                VerticalAlignment="Center">
-          <TextBlock Text="PDF" FontSize="8" FontWeight="Bold" Foreground="White"
-                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <Grid ColumnDefinitions="28,*,Auto,Auto" MinHeight="36" ToolTip.Tip="{Binding FullPath}">
+        <PathIcon Width="20" Height="20" Data="{StaticResource PageTextIcon}"
+                  Foreground="{DynamicResource HomeMutedBrush}" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13"
+                   VerticalAlignment="Center" Margin="6,0,8,0"
+                   TextTrimming="CharacterEllipsis" />
+        <Border Grid.Column="2" CornerRadius="3" Padding="5,2" VerticalAlignment="Center"
+                Background="{DynamicResource PdfBadgeBrush}">
+          <TextBlock Text="PDF" FontSize="9" FontWeight="Bold" Foreground="White" />
         </Border>
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,4,0">
-          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
-                     TextTrimming="CharacterEllipsis" />
-          <TextBlock Classes="muted" FontSize="11"
-                     Text="{Binding Folder}" TextTrimming="CharacterEllipsis" />
-        </StackPanel>
-        <Button Grid.Column="2" Classes="icon" HorizontalAlignment="Right" VerticalAlignment="Center"
+        <Button Grid.Column="3" Classes="star" Margin="4,0,0,0"
                 Command="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).ToggleStarCommand}"
                 CommandParameter="{Binding}"
                 ToolTip.Tip="Star or unstar this file">
@@ -83,6 +187,7 @@
             <PathIcon Width="14" Height="14" Data="{StaticResource StarIcon}" Foreground="#F5B301"
                       IsVisible="{Binding IsStarred}" />
             <PathIcon Width="14" Height="14" Data="{StaticResource StarOutlineIcon}"
+                      Foreground="{DynamicResource HomeMutedBrush}"
                       IsVisible="{Binding !IsStarred}" />
           </Panel>
         </Button>
@@ -94,180 +199,170 @@
 
     <!-- Recent / Starred sidebar -->
     <Border Classes="homeSidebar">
-      <DockPanel Margin="12,16,12,12">
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*" Margin="0,0,0,12">
+      <DockPanel Margin="14,18,14,12">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6,0,0,12">
           <Button Classes="sidebarTab" Classes.active="{Binding !IsStarredSidebar}"
-                  Content="Recent" Command="{Binding ShowRecentSidebarCommand}" />
-          <Button Grid.Column="1" Classes="sidebarTab" Classes.active="{Binding IsStarredSidebar}"
+                  Content="Recent files" Command="{Binding ShowRecentSidebarCommand}" />
+          <Button Classes="sidebarTab" Classes.active="{Binding IsStarredSidebar}"
                   Content="Starred" Command="{Binding ShowStarredSidebarCommand}" />
-        </Grid>
+        </StackPanel>
 
-        <Button DockPanel.Dock="Bottom" Classes="ghost" HorizontalAlignment="Stretch"
-                Content="Clear list"
+        <Button DockPanel.Dock="Bottom" Classes="homeLink"
+                Content="Clear all"
                 Command="{Binding ClearRecentCommand}"
                 IsVisible="{Binding !IsStarredSidebar}"
                 IsEnabled="{Binding HasRecentFiles}"
                 Margin="0,8,0,0" />
 
-        <!-- Recent list -->
         <Panel IsVisible="{Binding !IsStarredSidebar}">
           <StackPanel Spacing="4" VerticalAlignment="Center" Margin="8"
                       IsVisible="{Binding !HasRecentFiles}">
             <TextBlock Text="No recent files" FontWeight="SemiBold" HorizontalAlignment="Center" />
-            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" HorizontalAlignment="Center"
+            <TextBlock Classes="homeMuted" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
+                       HorizontalAlignment="Center"
                        Text="Open a PDF and it will show up here." />
           </StackPanel>
-          <ListBox ItemsSource="{Binding RecentFiles}"
+          <ListBox Classes="homeFiles"
+                   ItemsSource="{Binding RecentFiles}"
                    ItemTemplate="{StaticResource SidebarFileRowTemplate}"
-                   Background="Transparent"
-                   BorderThickness="0"
                    IsVisible="{Binding HasRecentFiles}"
                    DoubleTapped="OnRecentFileDoubleTapped" />
         </Panel>
 
-        <!-- Starred list -->
         <Panel IsVisible="{Binding IsStarredSidebar}">
           <StackPanel Spacing="4" VerticalAlignment="Center" Margin="8"
                       IsVisible="{Binding !HasStarredFiles}">
             <TextBlock Text="No starred files" FontWeight="SemiBold" HorizontalAlignment="Center" />
-            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" HorizontalAlignment="Center"
+            <TextBlock Classes="homeMuted" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
+                       HorizontalAlignment="Center"
                        Text="Click the star next to a file to keep it here." />
           </StackPanel>
-          <ListBox ItemsSource="{Binding StarredFiles}"
+          <ListBox Classes="homeFiles"
+                   ItemsSource="{Binding StarredFiles}"
                    ItemTemplate="{StaticResource SidebarFileRowTemplate}"
-                   Background="Transparent"
-                   BorderThickness="0"
                    IsVisible="{Binding HasStarredFiles}"
                    DoubleTapped="OnRecentFileDoubleTapped" />
         </Panel>
       </DockPanel>
     </Border>
 
-    <!-- Main: brand, drop zone, tools -->
-    <ScrollViewer Grid.Column="1">
-      <StackPanel MaxWidth="860" Margin="32,28,32,36" Spacing="24" HorizontalAlignment="Stretch">
+    <!-- New Task dashboard -->
+    <Border Grid.Column="1" Classes="homeCanvas" Classes.dragOver="{Binding IsFileDragOver}">
+      <DockPanel>
+        <Panel DockPanel.Dock="Bottom" Margin="0,8,0,14" HorizontalAlignment="Center">
+          <TextBlock Classes="homeMuted" FontSize="13" Text="Drag PDFs anywhere to open"
+                     IsVisible="{Binding !IsFileDragOver}" />
+          <TextBlock FontSize="13" FontWeight="SemiBold" Text="Release to open"
+                     Foreground="{DynamicResource AccentBrush}"
+                     IsVisible="{Binding IsFileDragOver}" />
+        </Panel>
 
-        <StackPanel Spacing="4">
-          <TextBlock Classes="title" Text="OpenPdfStudio" />
-          <TextBlock Classes="subtitle"
-                     Text="Free, open-source PDF viewing and editing. Your files never leave this computer." />
-        </StackPanel>
+        <ScrollViewer>
+          <StackPanel MaxWidth="900" Margin="32,26,16,8" HorizontalAlignment="Stretch" Spacing="22">
 
-        <Border Classes="card dropZone" Classes.dragOver="{Binding IsFileDragOver}" Padding="4">
-          <Grid MinHeight="120">
-            <Rectangle Classes="dropOutline"
-                       Stroke="{DynamicResource AccentBrush}"
-                       StrokeThickness="1.5"
-                       StrokeDashArray="6,5"
-                       RadiusX="8" RadiusY="8"
-                       Fill="Transparent"
-                       IsHitTestVisible="False"
-                       Margin="2" />
-            <DockPanel Margin="24,18" LastChildFill="True">
-              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Button Classes="ghost"
-                        Content="Use as default PDF app"
-                        Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).MakeDefaultPdfAppCommand}" />
-                <Button Classes="primary"
-                        Content="Open a PDF"
-                        Command="{Binding OpenFileCommand}" />
-              </StackPanel>
-              <StackPanel Spacing="4" VerticalAlignment="Center" Margin="0,0,24,0">
-                <Panel>
-                  <TextBlock Text="Drop a PDF here" FontSize="18" FontWeight="SemiBold"
-                             IsVisible="{Binding !IsFileDragOver}" />
-                  <TextBlock Text="Release to open" FontSize="18" FontWeight="SemiBold"
-                             Foreground="{DynamicResource AccentBrush}"
-                             IsVisible="{Binding IsFileDragOver}" />
-                </Panel>
-                <TextBlock Classes="muted"
-                           Text="or choose a file from your computer. Press Ctrl+O at any time." />
+            <DockPanel Margin="0,0,16,0">
+              <Button DockPanel.Dock="Right" Classes="primary" VerticalAlignment="Top"
+                      Content="Open a PDF" Command="{Binding OpenFileCommand}" />
+              <StackPanel Spacing="4">
+                <TextBlock Classes="title" Text="New Task" />
+                <TextBlock Classes="homeMuted" FontSize="15" Text="Choose what you want to do" />
               </StackPanel>
             </DockPanel>
-          </Grid>
-        </Border>
 
-        <StackPanel Spacing="12">
-          <TextBlock Classes="section" Text="Quick tools" />
-          <UniformGrid Columns="3">
+            <UniformGrid Columns="3">
 
-            <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="118"
-                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OrganizePagesCommand}">
-              <StackPanel Spacing="8">
-                <PathIcon Data="{StaticResource OrganizePagesIcon}" />
-                <TextBlock Text="Organize pages" FontWeight="SemiBold" />
-                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                           Text="Drag to reorder, rotate, delete, or add blank pages." />
-              </StackPanel>
-            </Button>
+              <Button Classes="taskCard" Command="{Binding OpenFileCommand}"
+                      ToolTip.Tip="Open a PDF from your computer (Ctrl+O)">
+                <StackPanel Spacing="14">
+                  <PathIcon Data="{StaticResource PageTextIcon}" Foreground="#0E9AA7" />
+                  <TextBlock Classes="label" Text="Open PDF" />
+                </StackPanel>
+              </Button>
 
-            <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="118"
-                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SplitPdfCommand}">
-              <StackPanel Spacing="8">
-                <PathIcon Data="{StaticResource SplitPdfIcon}" />
-                <TextBlock Text="Split PDF" FontWeight="SemiBold" />
-                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                           Text="Break a file into separate pages or ranges." />
-              </StackPanel>
-            </Button>
+              <Button Classes="taskCard" Command="{Binding ComingSoonCommand}" CommandParameter="Scan to PDF"
+                      ToolTip.Tip="Turn scans or images into a PDF">
+                <StackPanel Spacing="14">
+                  <PathIcon Data="{StaticResource ScannerIcon}" Foreground="#1A73E8" />
+                  <StackPanel Spacing="2">
+                    <TextBlock Classes="label" Text="Scan to PDF" />
+                    <TextBlock Classes="soon" Text="Coming soon" />
+                  </StackPanel>
+                </StackPanel>
+              </Button>
 
-            <Button Classes="toolCard" Margin="0,0,0,10" MinHeight="118"
-                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).MergePdfsCommand}">
-              <StackPanel Spacing="8">
-                <PathIcon Data="{StaticResource MergePdfsIcon}" />
-                <TextBlock Text="Merge PDFs" FontWeight="SemiBold" />
-                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                           Text="Combine several files into one document." />
-              </StackPanel>
-            </Button>
+              <Button Classes="taskCard" Command="{Binding ComingSoonCommand}" CommandParameter="OCR"
+                      ToolTip.Tip="Recognize text in scanned pages so it can be searched and copied">
+                <StackPanel Spacing="14">
+                  <PathIcon Data="{StaticResource SearchIcon}" Foreground="#F07B2B" />
+                  <StackPanel Spacing="2">
+                    <TextBlock Classes="label" Text="OCR Make Searchable" />
+                    <TextBlock Classes="soon" Text="Coming soon" />
+                  </StackPanel>
+                </StackPanel>
+              </Button>
 
-            <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="118"
-                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).StartCommentingCommand}">
-              <StackPanel Spacing="8">
-                <PathIcon Data="{StaticResource CommentIcon}" />
-                <TextBlock Text="Add comments" FontWeight="SemiBold" />
-                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                           Text="Highlight text, and add notes and text boxes." />
-              </StackPanel>
-            </Button>
+              <Button Classes="taskCard" Command="{Binding ComingSoonCommand}" CommandParameter="Convert to Word"
+                      ToolTip.Tip="Export a PDF as an editable Word document">
+                <StackPanel Spacing="14">
+                  <PathIcon Data="{StaticResource WordFileIcon}" Foreground="#2E9E4F" />
+                  <StackPanel Spacing="2">
+                    <TextBlock Classes="label" Text="Convert to Word" />
+                    <TextBlock Classes="soon" Text="Coming soon" />
+                  </StackPanel>
+                </StackPanel>
+              </Button>
 
-            <Button Classes="toolCard" Margin="0,0,10,10" MinHeight="118"
-                    Command="{Binding ComingSoonCommand}" CommandParameter="Scan PDF">
-              <StackPanel Spacing="8">
-                <PathIcon Data="{StaticResource ScanPdfIcon}" />
-                <TextBlock Text="Scan PDF" FontWeight="SemiBold" />
-                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                           Text="Turn scans or images into a searchable PDF." />
-                <TextBlock Classes="hint" Text="Coming soon" />
-              </StackPanel>
-            </Button>
+              <Button Classes="taskCard"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OrganizePagesCommand}"
+                      ToolTip.Tip="Drag to reorder, rotate, delete, or add blank pages">
+                <StackPanel Spacing="14">
+                  <PathIcon Data="{StaticResource FileMultipleIcon}" Foreground="#7B4FD6" />
+                  <TextBlock Classes="label" Text="Organize Pages" />
+                </StackPanel>
+              </Button>
 
-            <Button Classes="toolCard" Margin="0,0,0,10" MinHeight="118"
-                    Command="{Binding ComingSoonCommand}" CommandParameter="Protect">
-              <StackPanel Spacing="8">
-                <PathIcon Data="{StaticResource LockIcon}" />
-                <TextBlock Text="Protect" FontWeight="SemiBold" />
-                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                           Text="Set or remove a password." />
-                <TextBlock Classes="hint" Text="Coming soon" />
-              </StackPanel>
-            </Button>
+              <Button Classes="taskCard" Command="{Binding ComingSoonCommand}" CommandParameter="Compare"
+                      ToolTip.Tip="Show the differences between two PDFs">
+                <StackPanel Spacing="14">
+                  <PathIcon Data="{StaticResource CompareIcon}" Foreground="#E8A317" />
+                  <StackPanel Spacing="2">
+                    <TextBlock Classes="label" Text="Compare" />
+                    <TextBlock Classes="soon" Text="Coming soon" />
+                  </StackPanel>
+                </StackPanel>
+              </Button>
 
-            <Button Classes="toolCard" Margin="0,0,10,0" MinHeight="118"
-                    Command="{Binding ComingSoonCommand}" CommandParameter="Compress">
-              <StackPanel Spacing="8">
-                <PathIcon Data="{StaticResource CompressIcon}" />
-                <TextBlock Text="Compress" FontWeight="SemiBold" />
-                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                           Text="Make large files smaller." />
-                <TextBlock Classes="hint" Text="Coming soon" />
-              </StackPanel>
-            </Button>
+              <Button Classes="taskCard"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SplitPdfCommand}"
+                      ToolTip.Tip="Break a file into separate pages or ranges">
+                <StackPanel Spacing="14">
+                  <PathIcon Data="{StaticResource SplitPdfIcon}" Foreground="#D9534F" />
+                  <TextBlock Classes="label" Text="Split PDF" />
+                </StackPanel>
+              </Button>
 
-          </UniformGrid>
-        </StackPanel>
+              <Button Classes="taskCard"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).MergePdfsCommand}"
+                      ToolTip.Tip="Combine several files into one document">
+                <StackPanel Spacing="14">
+                  <PathIcon Data="{StaticResource MergePdfsIcon}" Foreground="#2B7BB9" />
+                  <TextBlock Classes="label" Text="Merge PDFs" />
+                </StackPanel>
+              </Button>
 
-      </StackPanel>
-    </ScrollViewer>
+              <Button Classes="taskCard"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).StartCommentingCommand}"
+                      ToolTip.Tip="Highlight text, and add notes and text boxes">
+                <StackPanel Spacing="14">
+                  <PathIcon Data="{StaticResource CommentIcon}" Foreground="#C2185B" />
+                  <TextBlock Classes="label" Text="Add Comments" />
+                </StackPanel>
+              </Button>
+
+            </UniformGrid>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
   </Grid>
 </UserControl>
