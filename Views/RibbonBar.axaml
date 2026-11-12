@@ -250,6 +250,30 @@
                 </Button>
               </StackPanel>
             </DockPanel>
+            <Border Width="1" Margin="2,6" Background="{DynamicResource HairlineBrush}" />
+            <DockPanel Margin="4,0">
+              <TextBlock DockPanel.Dock="Bottom" Classes="group" Text="Pages" />
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="tool" Command="{Binding OrganizePagesCommand}" ToolTip.Tip="Organize pages">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource OrganizePagesIcon}" />
+                    <TextBlock Text="Organize" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Command="{Binding SplitPdfCommand}" ToolTip.Tip="Split PDF">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource SplitPdfIcon}" />
+                    <TextBlock Text="Split" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tool" Command="{Binding MergePdfsCommand}" ToolTip.Tip="Merge PDFs">
+                  <StackPanel Spacing="2">
+                    <PathIcon Data="{StaticResource MergePdfsIcon}" />
+                    <TextBlock Text="Merge" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </DockPanel>
           </StackPanel>
 
           <StackPanel Classes="ribbon" Orientation="Horizontal" IsVisible="{Binding IsCommentRibbon}">
