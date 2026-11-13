@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:OpenPdfStudio.ViewModels"
-             xmlns:compare="using:OpenPdfStudio.Services.Compare"
              mc:Ignorable="d"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -13,54 +12,94 @@
             Background="{DynamicResource SystemChromeLowColor}"
             BorderBrush="{DynamicResource HairlineBrush}"
             BorderThickness="0,0,0,1"
-            Padding="10,6">
-      <DockPanel>
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-          <Button Classes="ghost" Content="Open left in tab" Command="{Binding OpenLeftInTabCommand}" />
-          <Button Classes="ghost" Content="Open right in tab" Command="{Binding OpenRightInTabCommand}" />
-          <Button Classes="ghost" Content="Close" Command="{Binding CloseCommand}" />
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <TextBlock Text="Compare" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <Button Classes="ghost" Content="Swap" Command="{Binding SwapSidesCommand}"
-                  ToolTip.Tip="Swap the left and right documents" />
-          <CheckBox Content="Sync pages" IsChecked="{Binding SyncPages}" VerticalAlignment="Center" />
-          <Button Classes="ghost" Content="Previous" Command="{Binding PreviousPageCommand}" />
-          <Button Classes="ghost" Content="Next" Command="{Binding NextPageCommand}" />
-          <TextBlock Text="{Binding Summary}" Opacity="0.75" VerticalAlignment="Center"
-                     TextTrimming="CharacterEllipsis" MaxWidth="420" />
-        </StackPanel>
-      </DockPanel>
-    </Border>
+            Padding="12,10">
+      <StackPanel Spacing="10">
+        <!-- Row 1: mode + summary -->
+        <DockPanel LastChildFill="True">
+          <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10"
+                      VerticalAlignment="Center">
+            <TextBlock Text="Compare" FontWeight="SemiBold" FontSize="15"
+                       VerticalAlignment="Center" />
 
-    <Border DockPanel.Dock="Bottom"
-            Height="180"
-            Background="{DynamicResource SystemChromeLowColor}"
-            BorderBrush="{DynamicResource HairlineBrush}"
-            BorderThickness="0,1,0,0">
-      <DockPanel Margin="10,8">
-        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-          <CheckBox DockPanel.Dock="Right" Content="Differences only"
-                    IsChecked="{Binding ShowOnlyDifferences}" VerticalAlignment="Center" />
-          <TextBlock Text="Page differences" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <TextBlock Text="Show" Opacity="0.7" VerticalAlignment="Center" Margin="8,0,0,0" />
+            <ComboBox MinHeight="32" MinWidth="140"
+                      ItemsSource="{Binding HighlightFilterOptions}"
+                      SelectedItem="{Binding SelectedHighlightFilter}"
+                      VerticalAlignment="Center"
+                      ToolTip.Tip="Changed words in red, shared words in green, or no highlights" />
+
+            <TextBlock Text="Scope" Opacity="0.7" VerticalAlignment="Center" Margin="10,0,0,0" />
+            <ComboBox MinHeight="32" MinWidth="160"
+                      ItemsSource="{Binding CompareScopeOptions}"
+                      SelectedItem="{Binding SelectedCompareScope}"
+                      VerticalAlignment="Center"
+                      ToolTip.Tip="Compare whole documents or a chosen page pair" />
+
+            <CheckBox Content="Sync" IsChecked="{Binding SyncPages}"
+                      VerticalAlignment="Center" Margin="8,0,0,0"
+                      ToolTip.Tip="Keep scroll position linked (same page index in whole-doc mode; fraction only for selected pages)" />
+          </StackPanel>
+
+          <TextBlock Text="{Binding Summary}" Opacity="0.75" VerticalAlignment="Center"
+                     HorizontalAlignment="Right" Margin="16,0,0,0"
+                     TextTrimming="CharacterEllipsis"
+                     TextAlignment="Right" />
         </DockPanel>
-        <ListBox ItemsSource="{Binding DiffItems}"
-                 SelectedItem="{Binding SelectedDiff}">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="compare:PdfPageDiff">
-              <TextBlock Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-      </DockPanel>
+
+        <!-- Row 2: page pickers / nav + actions -->
+        <DockPanel LastChildFill="True">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8"
+                      VerticalAlignment="Center">
+            <Button Classes="secondary" Content="Open left in tab"
+                    Command="{Binding OpenLeftInTabCommand}" />
+            <Button Classes="secondary" Content="Open right in tab"
+                    Command="{Binding OpenRightInTabCommand}" />
+            <Button Classes="secondary" Content="Close"
+                    Command="{Binding CloseCommand}" />
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="8"
+                        IsVisible="{Binding IsSelectedPagesScope}">
+              <TextBlock Text="Left page" Opacity="0.7" VerticalAlignment="Center" />
+              <TextBox Width="48" MinHeight="32" Text="{Binding LeftComparePageDisplay}"
+                       VerticalAlignment="Center" VerticalContentAlignment="Center"
+                       ToolTip.Tip="Left page number (1-based)" />
+              <TextBlock Text="Right page" Opacity="0.7" VerticalAlignment="Center" />
+              <TextBox Width="48" MinHeight="32" Text="{Binding RightComparePageDisplay}"
+                       VerticalAlignment="Center" VerticalContentAlignment="Center"
+                       ToolTip.Tip="Right page number (1-based)" />
+              <Button Classes="secondary" Content="Use current"
+                      Command="{Binding UseCurrentPagesCommand}"
+                      ToolTip.Tip="Set pages from what you are viewing" />
+              <Button Classes="primary" Content="Compare" Padding="16,7"
+                      Command="{Binding CompareSelectedPagesCommand}"
+                      ToolTip.Tip="Re-run compare for the selected page pair" />
+            </StackPanel>
+
+            <Button Classes="secondary" Content="Swap"
+                    Command="{Binding SwapSidesCommand}"
+                    ToolTip.Tip="Swap the left and right documents" />
+            <Button Classes="secondary" Content="Previous"
+                    Command="{Binding PreviousPageCommand}"
+                    IsVisible="{Binding !IsSelectedPagesScope}" />
+            <Button Classes="secondary" Content="Next"
+                    Command="{Binding NextPageCommand}"
+                    IsVisible="{Binding !IsSelectedPagesScope}" />
+          </StackPanel>
+        </DockPanel>
+      </StackPanel>
     </Border>
 
     <Grid ColumnDefinitions="*,1,*">
       <DockPanel Grid.Column="0">
-        <Border DockPanel.Dock="Top" Padding="10,6"
+        <Border DockPanel.Dock="Top" Padding="12,8"
                 Background="{DynamicResource SystemChromeMediumColor}">
-          <TextBlock Text="{Binding LeftTitle}" FontWeight="SemiBold"
-                     TextTrimming="CharacterEllipsis" />
+          <StackPanel Spacing="2">
+            <TextBlock Text="Left" Opacity="0.6" FontSize="11" />
+            <TextBlock Text="{Binding LeftTitle}" FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis" />
+          </StackPanel>
         </Border>
         <ContentControl Content="{Binding Left}" />
       </DockPanel>
@@ -68,10 +107,13 @@
       <Border Grid.Column="1" Width="1" Background="{DynamicResource HairlineBrush}" />
 
       <DockPanel Grid.Column="2">
-        <Border DockPanel.Dock="Top" Padding="10,6"
+        <Border DockPanel.Dock="Top" Padding="12,8"
                 Background="{DynamicResource SystemChromeMediumColor}">
-          <TextBlock Text="{Binding RightTitle}" FontWeight="SemiBold"
-                     TextTrimming="CharacterEllipsis" />
+          <StackPanel Spacing="2">
+            <TextBlock Text="Right" Opacity="0.6" FontSize="11" />
+            <TextBlock Text="{Binding RightTitle}" FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis" />
+          </StackPanel>
         </Border>
         <ContentControl Content="{Binding Right}" />
       </DockPanel>

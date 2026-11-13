@@ -38,7 +38,7 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 - Merge several PDFs into one, in the order you choose. Password-protected files ask for their password.
 - Convert a PDF to an editable Word document (`.docx`) from the home screen, the Home tab Convert group, or File > Export to Word. Text, fonts, colours, and images are preserved where possible; scanned pages become full-page pictures. Only `.docx` is written.
 - Create a PDF from a Word document (`.docx`) from the home screen, the Home tab, or File > Create PDF from Word. Paragraphs, styles, lists, tables, images, and headers/footers are laid out into pages. The old binary `.doc` format is not supported; save as `.docx` first.
-- Compare two PDFs side by side from the home screen. Pages stay in sync as you navigate (optional), and a list shows which pages differ by text, plus pages that exist only on the left or right.
+- Compare two PDFs side by side from the home screen. Choose Differences (changed words in red on both panes), Matching (shared words in green), or no highlights; compare whole documents or a selected page pair. Sync links scroll (same page in whole-doc mode; vertical position only for selected pages).
 - Settings (File > Settings) for theme, default page layout, hand cursor, ruler, comment tools, and the ribbon.
 - Help tab with links to the documentation and the issue tracker, and an About box.
 - Themes: Dark, Light, System, Midnight, and High Contrast.
@@ -114,7 +114,7 @@ PDFium calls run on a dedicated background worker, so rendering does not block t
 - `Styles` and `Themes` hold colors, icons, control styles, and theme variants.
 ## Releases
 
-Pushing a tag such as `v0.1.0` runs the release workflow. It publishes self-contained builds for `win-x64`, `linux-x64`, and `osx-arm64` and attaches them to a GitHub Release.
+Pushing a tag such as `v0.5.0` runs the release workflow. It publishes self-contained builds for `win-x64`, `linux-x64`, and `osx-arm64` and attaches them to a GitHub Release. Release notes are taken from [CHANGELOG.md](CHANGELOG.md) for that version.
 
 ## License
 

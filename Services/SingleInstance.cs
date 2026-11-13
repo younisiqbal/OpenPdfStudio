@@ -42,10 +42,14 @@ internal sealed class SingleInstance : IDisposable
     }
 
     public const string ActivateToken = "__ACTIVATE__";
+    public const string CompareTokenPrefix = "__COMPARE__|";
 
     public static void Forward(IEnumerable<string> args)
     {
         var paths = PdfLaunch.PathsFromArgs(args);
+        var compareLine = PdfLaunch.TryGetComparePair(args, out var left, out var right)
+            ? $"{CompareTokenPrefix}{left}|{right}"
+            : null;
         for (var attempt = 0; attempt < 20; attempt++)
         {
             try
@@ -54,6 +58,8 @@ internal sealed class SingleInstance : IDisposable
                 client.Connect(250);
                 using var writer = new StreamWriter(client) { AutoFlush = true };
                 writer.WriteLine(ActivateToken);
+                if (compareLine is not null)
+                    writer.WriteLine(compareLine);
                 foreach (var path in paths)
                     writer.WriteLine(path);
                 return;

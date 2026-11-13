@@ -29,6 +29,15 @@
             <controls:SelectionOverlay Rects="{Binding CurrentMatchRects}"
                                        PageWidthPoints="{Binding WidthPoints}"
                                        Fill="#99FF8C00" />
+            <controls:SelectionOverlay Rects="{Binding DiffDeleteRects}"
+                                       PageWidthPoints="{Binding WidthPoints}"
+                                       Fill="#73E53935" />
+            <controls:SelectionOverlay Rects="{Binding DiffInsertRects}"
+                                       PageWidthPoints="{Binding WidthPoints}"
+                                       Fill="#73E53935" />
+            <controls:SelectionOverlay Rects="{Binding DiffMatchRects}"
+                                       PageWidthPoints="{Binding WidthPoints}"
+                                       Fill="#734CAF50" />
             <controls:SelectionOverlay Rects="{Binding SelectionRects}"
                                        PageWidthPoints="{Binding WidthPoints}" />
             <controls:AnnotationOverlay Annotations="{Binding Annotations}"

@@ -50,6 +50,7 @@ public partial class DocumentView : UserControl
     private (int PageIndex, Point Point)? _pendingHover;
 
     private (int PageIndex, double Fraction)? _zoomAnchor;
+    private int _suppressScrollAnchor;
 
     private bool _hasContextAnchor;
     private (PdfPageViewModel Page, Point PointInPoints)? _contextAnchor;
@@ -202,6 +203,7 @@ public partial class DocumentView : UserControl
         {
             _vm.ScrollToPageRequested -= OnScrollToPageRequested;
             _vm.ScrollToMatchRequested -= OnScrollToMatchRequested;
+            _vm.ScrollToAnchorRequested -= OnScrollToAnchorRequested;
             _vm.PropertyChanged -= OnViewModelPropertyChanged;
             _vm.Spreads.CollectionChanged -= OnSpreadsChanged;
             _vm.SetClipboardTextAsync = null;
@@ -222,6 +224,7 @@ public partial class DocumentView : UserControl
 
         _vm.ScrollToPageRequested += OnScrollToPageRequested;
         _vm.ScrollToMatchRequested += OnScrollToMatchRequested;
+        _vm.ScrollToAnchorRequested += OnScrollToAnchorRequested;
         _vm.PropertyChanged += OnViewModelPropertyChanged;
         _vm.Spreads.CollectionChanged += OnSpreadsChanged;
         _vm.SetClipboardTextAsync = async text =>
@@ -385,6 +388,8 @@ public partial class DocumentView : UserControl
 
         _vm.SavedScrollOffset = PageScroller.Offset;
         UpdateVisiblePages();
+        if (e.OffsetDelta != default && _suppressScrollAnchor == 0)
+            ReportScrollAnchor();
         PositionOpenEditors();
     }
 
@@ -575,6 +580,22 @@ public partial class DocumentView : UserControl
 
     private void OnScrollToPageRequested(int index) => ScrollToPage(index, 0);
 
+    private void OnScrollToAnchorRequested(int index, double fraction)
+    {
+        _suppressScrollAnchor++;
+        try
+        {
+            ScrollToPage(index, fraction);
+        }
+        finally
+        {
+            // Peer scroll events can arrive after Offset is set; clear on the next input pass.
+            Dispatcher.UIThread.Post(
+                () => _suppressScrollAnchor = Math.Max(0, _suppressScrollAnchor - 1),
+                DispatcherPriority.Input);
+        }
+    }
+
     /// <summary>A new row may land at the same scroll offset, so no scroll event would ask for its pages.</summary>
     private void OnSpreadsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
@@ -585,6 +606,21 @@ public partial class DocumentView : UserControl
 
     private void OnScrollToMatchRequested(int index, double fraction) =>
         ScrollToPage(index, fraction, viewportOffset: PageScroller.Viewport.Height / 3);
+
+    private void ReportScrollAnchor()
+    {
+        if (_vm is null)
+            return;
+
+        var index = _vm.CurrentPageIndex;
+        var frame = PageFrame(index);
+        var origin = frame?.TranslatePoint(default, PageScroller);
+        var fraction = 0.0;
+        if (frame is not null && origin is not null && frame.Bounds.Height > 0)
+            fraction = Math.Clamp(-origin.Value.Y / frame.Bounds.Height, 0, 1);
+
+        _vm.ReportScrollAnchor(index, fraction);
+    }
 
     private void ScrollToPage(int index, double fraction, int attempt = 0, double viewportOffset = 0)
     {

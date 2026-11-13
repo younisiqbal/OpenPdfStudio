@@ -37,6 +37,9 @@ public partial class PdfPageViewModel : ObservableObject, ICachedPageBitmap
     [ObservableProperty] private IReadOnlyList<Rect>? _selectionRects;
     [ObservableProperty] private IReadOnlyList<Rect>? _searchRects;
     [ObservableProperty] private IReadOnlyList<Rect>? _currentMatchRects;
+    [ObservableProperty] private IReadOnlyList<Rect>? _diffDeleteRects;
+    [ObservableProperty] private IReadOnlyList<Rect>? _diffInsertRects;
+    [ObservableProperty] private IReadOnlyList<Rect>? _diffMatchRects;
     [ObservableProperty] private ITransform? _pageTransform;
     [ObservableProperty] private Rect? _draftRect;
 

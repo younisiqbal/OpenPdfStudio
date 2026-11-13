@@ -99,6 +99,25 @@
     <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
   </Style>
 
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+    <Setter Property="BorderBrush" Value="#5A6B88" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="MinHeight" Value="32" />
+  </Style>
+  <Style Selector="Button.secondary:pointerover">
+    <Setter Property="Background" Value="#243456" />
+    <Setter Property="BorderBrush" Value="#7A8BA8" />
+  </Style>
+  <Style Selector="Button.secondary /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemChromeMediumColor}" />
+  </Style>
+  <Style Selector="Button.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#243456" />
+  </Style>
+
   <Style Selector="Button.tab">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="CornerRadius" Value="8,8,0,0" />

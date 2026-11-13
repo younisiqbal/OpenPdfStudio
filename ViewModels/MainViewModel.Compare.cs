@@ -32,6 +32,9 @@ public partial class MainViewModel
         await StartCompareAsync(pair.Left, pair.Right);
     }
 
+    public Task StartCompareFromPathsAsync(string leftPath, string rightPath) =>
+        StartCompareAsync(leftPath, rightPath);
+
     private async Task StartCompareAsync(string leftPath, string rightPath)
     {
         leftPath = Path.GetFullPath(leftPath);

@@ -85,7 +85,7 @@ public sealed class ComparePickDialog : Window
                 },
                 new TextBlock
                 {
-                    Text = "Choose two PDF files to view side by side and list pages whose text differs.",
+                    Text = "Choose two PDF files to view side by side. Changed text is highlighted on the pages.",
                     Opacity = 0.75,
                     TextWrapping = TextWrapping.Wrap
                 },

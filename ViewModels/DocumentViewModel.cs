@@ -117,6 +117,12 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
     /// <summary>Raised when the view should bring a point on a page into view. Arguments: page index, fraction down the page.</summary>
     public event Action<int, double>? ScrollToMatchRequested;
 
+    /// <summary>Raised by the view while scrolling. Arguments: page index, Y fraction within that page.</summary>
+    public event Action<int, double>? ScrollAnchorChanged;
+
+    /// <summary>Raised when the view should align to a page + Y fraction (linked compare scroll).</summary>
+    public event Action<int, double>? ScrollToAnchorRequested;
+
     [ObservableProperty] private bool _isActive;
 
     [ObservableProperty] private double _zoomPercent = 100;
@@ -487,6 +493,27 @@ public partial class DocumentViewModel : ViewModelBase, IDisposable
         PageInput = PageNumber.ToString(CultureInfo.InvariantCulture);
         ScrollToPageRequested?.Invoke(index);
     }
+
+    /// <summary>Scroll so the given page and Y fraction align at the top of the viewport.</summary>
+    public void ScrollToAnchor(int pageIndex, double fraction)
+    {
+        if (Pages.Count == 0)
+            return;
+
+        pageIndex = Math.Clamp(pageIndex, 0, Pages.Count - 1);
+        fraction = Math.Clamp(fraction, 0, 1);
+        if (CurrentPageIndex != pageIndex)
+        {
+            CurrentPageIndex = pageIndex;
+            PageInput = PageNumber.ToString(CultureInfo.InvariantCulture);
+        }
+
+        ScrollToAnchorRequested?.Invoke(pageIndex, fraction);
+    }
+
+    /// <summary>Called by the view as the user scrolls (page + fraction within that page).</summary>
+    public void ReportScrollAnchor(int pageIndex, double fraction) =>
+        ScrollAnchorChanged?.Invoke(pageIndex, Math.Clamp(fraction, 0, 1));
 
     /// <summary>Scrolls so the given rect on a page is in view. The rect is in PDF points.</summary>
     public void RevealRect(int pageIndex, Rect rect)

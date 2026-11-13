@@ -39,8 +39,16 @@ public partial class App : Application
                 instance.Received += payload => Dispatcher.UIThread.Post(() =>
                 {
                     viewModel.RequestActivate?.Invoke();
-                    if (payload != SingleInstance.ActivateToken)
-                        _ = viewModel.OpenPathAsync(payload);
+                    if (payload == SingleInstance.ActivateToken)
+                        return;
+                    if (payload.StartsWith(SingleInstance.CompareTokenPrefix, StringComparison.Ordinal) &&
+                        payload.Split('|', 3) is { Length: 3 } parts)
+                    {
+                        _ = viewModel.StartCompareFromPathsAsync(parts[1], parts[2]);
+                        return;
+                    }
+
+                    _ = viewModel.OpenPathAsync(payload);
                 });
             }
 
@@ -49,6 +57,9 @@ public partial class App : Application
 
             foreach (var path in PdfLaunch.PathsFromArgs(desktop.Args))
                 Dispatcher.UIThread.Post(() => _ = OpenFromLaunchAsync(viewModel, path));
+
+            if (PdfLaunch.TryGetComparePair(desktop.Args, out var compareLeft, out var compareRight))
+                Dispatcher.UIThread.Post(() => _ = viewModel.StartCompareFromPathsAsync(compareLeft, compareRight));
 
             desktop.Exit += (_, _) =>
             {
