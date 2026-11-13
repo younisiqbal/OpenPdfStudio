@@ -151,6 +151,7 @@ public partial class MainWindow : Window
             _vm.ShowSettingsAsync = null;
             _vm.ShowSplitAsync = null;
             _vm.ShowMergeAsync = null;
+            _vm.ShowComparePickAsync = null;
             _vm.ConfirmAsync = null;
             _vm.ShowAboutAsync = null;
             _vm.AdvancedSearch.PickFolderAsync = null;
@@ -174,6 +175,8 @@ public partial class MainWindow : Window
         _vm.ShowSettingsAsync = () => new SettingsDialog(_vm).ShowDialog(this);
         _vm.ShowSplitAsync = document => new SplitDialog(document).ShowDialog<IReadOnlyList<SplitOutput>?>(this);
         _vm.ShowMergeAsync = files => new MergeDialog(files).ShowDialog<IReadOnlyList<string>?>(this);
+        _vm.ShowComparePickAsync = initial => new ComparePickDialog(initial)
+            .ShowDialog<(string Left, string Right)?>(this);
         _vm.ConfirmAsync = (title, message, yes) => new ConfirmDialog(title, message, yes).ShowDialog<bool>(this);
         _vm.ShowAboutAsync = () => new AboutDialog(_vm.Version).ShowDialog(this);
         _vm.AdvancedSearch.PickFolderAsync = PickFolderAsync;

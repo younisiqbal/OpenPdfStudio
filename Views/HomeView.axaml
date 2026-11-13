@@ -418,14 +418,12 @@
                 </StackPanel>
               </Button>
 
-              <Button Classes="taskCard" Command="{Binding ComingSoonCommand}" CommandParameter="Compare"
-                      ToolTip.Tip="Show the differences between two PDFs">
+              <Button Classes="taskCard"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ComparePdfsCommand}"
+                      ToolTip.Tip="View two PDFs side by side and list pages whose text differs">
                 <StackPanel Spacing="14">
                   <PathIcon Data="{StaticResource CompareIcon}" Foreground="#E8A317" />
-                  <StackPanel Spacing="2">
-                    <TextBlock Classes="label" Text="Compare" />
-                    <TextBlock Classes="soon" Text="Coming soon" />
-                  </StackPanel>
+                  <TextBlock Classes="label" Text="Compare" />
                 </StackPanel>
               </Button>
 

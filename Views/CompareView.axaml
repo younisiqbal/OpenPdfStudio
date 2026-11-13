@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenPdfStudio.ViewModels"
+             xmlns:compare="using:OpenPdfStudio.Services.Compare"
+             mc:Ignorable="d"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             x:Class="OpenPdfStudio.Views.CompareView"
+             x:DataType="vm:CompareViewModel">
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top"
+            Background="{DynamicResource SystemChromeLowColor}"
+            BorderBrush="{DynamicResource HairlineBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="10,6">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+          <Button Classes="ghost" Content="Open left in tab" Command="{Binding OpenLeftInTabCommand}" />
+          <Button Classes="ghost" Content="Open right in tab" Command="{Binding OpenRightInTabCommand}" />
+          <Button Classes="ghost" Content="Close" Command="{Binding CloseCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Text="Compare" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Button Classes="ghost" Content="Swap" Command="{Binding SwapSidesCommand}"
+                  ToolTip.Tip="Swap the left and right documents" />
+          <CheckBox Content="Sync pages" IsChecked="{Binding SyncPages}" VerticalAlignment="Center" />
+          <Button Classes="ghost" Content="Previous" Command="{Binding PreviousPageCommand}" />
+          <Button Classes="ghost" Content="Next" Command="{Binding NextPageCommand}" />
+          <TextBlock Text="{Binding Summary}" Opacity="0.75" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" MaxWidth="420" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom"
+            Height="180"
+            Background="{DynamicResource SystemChromeLowColor}"
+            BorderBrush="{DynamicResource HairlineBrush}"
+            BorderThickness="0,1,0,0">
+      <DockPanel Margin="10,8">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+          <CheckBox DockPanel.Dock="Right" Content="Differences only"
+                    IsChecked="{Binding ShowOnlyDifferences}" VerticalAlignment="Center" />
+          <TextBlock Text="Page differences" FontWeight="SemiBold" VerticalAlignment="Center" />
+        </DockPanel>
+        <ListBox ItemsSource="{Binding DiffItems}"
+                 SelectedItem="{Binding SelectedDiff}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="compare:PdfPageDiff">
+              <TextBlock Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="*,1,*">
+      <DockPanel Grid.Column="0">
+        <Border DockPanel.Dock="Top" Padding="10,6"
+                Background="{DynamicResource SystemChromeMediumColor}">
+          <TextBlock Text="{Binding LeftTitle}" FontWeight="SemiBold"
+                     TextTrimming="CharacterEllipsis" />
+        </Border>
+        <ContentControl Content="{Binding Left}" />
+      </DockPanel>
+
+      <Border Grid.Column="1" Width="1" Background="{DynamicResource HairlineBrush}" />
+
+      <DockPanel Grid.Column="2">
+        <Border DockPanel.Dock="Top" Padding="10,6"
+                Background="{DynamicResource SystemChromeMediumColor}">
+          <TextBlock Text="{Binding RightTitle}" FontWeight="SemiBold"
+                     TextTrimming="CharacterEllipsis" />
+        </Border>
+        <ContentControl Content="{Binding Right}" />
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</UserControl>

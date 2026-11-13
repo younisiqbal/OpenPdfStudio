@@ -168,7 +168,7 @@ public partial class MainViewModel : ViewModelBase
             newValue.CommentRibbonRequested += ShowCommentRibbon;
         }
 
-        CurrentPage = (ViewModelBase?)newValue ?? Home;
+        CurrentPage = (ViewModelBase?)newValue ?? (ViewModelBase?)_compare ?? Home;
         TopSearch.OnActiveDocumentChanged();
         if (newValue is null)
             ExitPresentation();
@@ -390,7 +390,11 @@ public partial class MainViewModel : ViewModelBase
     private Task OpenFile() => OpenPdfAsync();
 
     [RelayCommand]
-    private void ShowHome() => ActiveDocument = null;
+    private void ShowHome()
+    {
+        CloseCompare();
+        ActiveDocument = null;
+    }
 
     [RelayCommand]
     private void Exit() => RequestClose?.Invoke();
@@ -595,6 +599,7 @@ public partial class MainViewModel : ViewModelBase
 
     public void DisposeAll()
     {
+        CloseCompare();
         foreach (var document in Documents)
             document.Dispose();
 

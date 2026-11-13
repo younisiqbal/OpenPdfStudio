@@ -13,7 +13,7 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 ## Features
 
 - Open PDF files, including password-protected documents. Drag one or more PDFs onto the window to open them. Dropping a Word document (`.docx`) offers to convert it to PDF.
-- New Task home screen: a Recent/Starred sidebar and task cards for opening, organizing, splitting, merging, converting to or from Word, and commenting on PDFs.
+- New Task home screen: a Recent/Starred sidebar and task cards for opening, organizing, splitting, merging, converting to or from Word, and comparing PDFs.
 - Open several documents at once in tabs.
 - Ribbon-style document view: quick Open, Save, Print, Undo, Redo, and Hand/Select buttons in the title bar, a File menu, and Home, Edit, Comment, View, Protect, and Help tabs. Hand and Select lead every tab. The Home tab includes Convert (To Word / From Word). Document tabs sit under the ribbon, with a Start tab for the home screen. Draw, Picture, Erase, Signature, Redact, password, and compress are shown as coming soon.
 - Three page layouts from the bottom bar: continuous scroll, single page, and two pages side by side (the first page on its own, like a book cover). In single-page layout, scrolling past the end of a page turns to the next one. The layout you pick is remembered.
@@ -38,6 +38,7 @@ The macOS build is not signed yet. The first time you open it, right-click the a
 - Merge several PDFs into one, in the order you choose. Password-protected files ask for their password.
 - Convert a PDF to an editable Word document (`.docx`) from the home screen, the Home tab Convert group, or File > Export to Word. Text, fonts, colours, and images are preserved where possible; scanned pages become full-page pictures. Only `.docx` is written.
 - Create a PDF from a Word document (`.docx`) from the home screen, the Home tab, or File > Create PDF from Word. Paragraphs, styles, lists, tables, images, and headers/footers are laid out into pages. The old binary `.doc` format is not supported; save as `.docx` first.
+- Compare two PDFs side by side from the home screen. Pages stay in sync as you navigate (optional), and a list shows which pages differ by text, plus pages that exist only on the left or right.
 - Settings (File > Settings) for theme, default page layout, hand cursor, ruler, comment tools, and the ribbon.
 - Help tab with links to the documentation and the issue tracker, and an About box.
 - Themes: Dark, Light, System, Midnight, and High Contrast.
