@@ -31,7 +31,13 @@ public sealed class ComparePickDialog : Window
 
         _leftLabel = PathLabel();
         _rightLabel = PathLabel();
-        UpdateLabels();
+        _compare = new Button { Content = "Compare", IsDefault = true, MinWidth = 88, Classes = { "primary" } };
+        _compare.Click += (_, _) =>
+        {
+            if (_left is null || _right is null)
+                return;
+            Close((_left, _right));
+        };
 
         var pickLeft = new Button { Content = "Choose left...", Classes = { "ghost" }, MinWidth = 120 };
         pickLeft.Click += async (_, _) =>
@@ -55,13 +61,6 @@ public sealed class ComparePickDialog : Window
 
         var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = 88 };
         cancel.Click += (_, _) => Close(null);
-        _compare = new Button { Content = "Compare", IsDefault = true, MinWidth = 88, Classes = { "primary" } };
-        _compare.Click += (_, _) =>
-        {
-            if (_left is null || _right is null)
-                return;
-            Close((_left, _right));
-        };
 
         var footer = new StackPanel
         {
