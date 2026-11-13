@@ -447,15 +447,6 @@
                 </StackPanel>
               </Button>
 
-              <Button Classes="taskCard"
-                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).StartCommentingCommand}"
-                      ToolTip.Tip="Highlight text, and add notes and text boxes">
-                <StackPanel Spacing="14">
-                  <PathIcon Data="{StaticResource CommentIcon}" Foreground="#C2185B" />
-                  <TextBlock Classes="label" Text="Add Comments" />
-                </StackPanel>
-              </Button>
-
             </UniformGrid>
           </StackPanel>
         </ScrollViewer>

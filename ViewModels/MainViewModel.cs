@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -24,7 +25,7 @@ public partial class MainViewModel : ViewModelBase
         "theme.txt");
 
     [ObservableProperty] private string _status = "Ready";
-    [ObservableProperty] private string _version = "v0.2.0";
+    [ObservableProperty] private string _version = ReadAssemblyVersion();
     [ObservableProperty] private ViewModelBase _currentPage;
 
     [ObservableProperty]
@@ -670,5 +671,17 @@ public partial class MainViewModel : ViewModelBase
         {
             Status = "Theme applied, but could not be saved";
         }
+    }
+
+    /// <summary>Uses the assembly version from the build (release tags set -p:Version).</summary>
+    private static string ReadAssemblyVersion()
+    {
+        var assembly = typeof(MainViewModel).Assembly;
+        var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+        var raw = informational is { Length: > 0 }
+            ? informational.Split('+', 2)[0]
+            : assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+        return raw.StartsWith('v') ? raw : "v" + raw;
     }
 }
